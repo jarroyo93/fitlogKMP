@@ -6,14 +6,15 @@ plugins {
     alias(libs.plugins.composeCompiler)
     id("org.jetbrains.kotlin.android")
 
-    // 👇 APLICAMOS LOS PLUGINS DE FIREBASE PARA ANDROID:
+    // APLICAMOS LOS PLUGINS DE FIREBASE PARA ANDROID:
     alias(libs.plugins.googleServices)
     alias(libs.plugins.firebaseAppDistribution)
 }
 
 kotlin {
     compilerOptions {
-        jvmTarget = JvmTarget.JVM_11
+        // 🚀 ACTUALIZADO A JVM 17 PARA ESTAR EN SINTONÍA CON EL MÓDULO COMPARTIDO
+        jvmTarget = JvmTarget.JVM_17
     }
 }
 
@@ -33,7 +34,7 @@ android {
         minSdk = libs.versions.android.minSdk.get().toInt()
         targetSdk = libs.versions.android.targetSdk.get().toInt()
 
-        // 📈 Recuperamos la versión real de tu FitLog original:
+        // Recuperamos la versión real de tu FitLog original:
         versionCode = 9
         versionName = "1.1.6"
     }
@@ -48,12 +49,13 @@ android {
         }
     }
     compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_11
-        targetCompatibility = JavaVersion.VERSION_11
+        // 🚀 ACTUALIZADO A JAVA 17
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
     }
 }
 
-// 👇 CONFIGURACIÓN DE TU GRUPO PILOTO DE ATLETAS:
+// CONFIGURACIÓN DE TU GRUPO PILOTO DE ATLETAS:
 firebaseAppDistribution {
     artifactType = "APK"
     groups = "fitlog-prueba-piloto"

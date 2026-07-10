@@ -1,8 +1,14 @@
 package dev.josearroyo.fitlog.data.model
 
+import kotlinx.serialization.Serializable
+
+@Serializable
 enum class EstadoSuscripcion { ACTIVO, SUSPENDIDO, VENCIDO, HUERFANO }
+
+@Serializable
 enum class RolUsuario { SUPERADMIN, ENTRENADOR, ATLETA }
 
+@Serializable
 enum class TipoPlanSuscripcion(val dias: Int, val etiqueta: String) {
     SEMANAL(7, "Semanal (7 días)"),
     QUINCENAL(15, "Quincenal (15 días)"),
@@ -11,10 +17,12 @@ enum class TipoPlanSuscripcion(val dias: Int, val etiqueta: String) {
     PERSONALIZADO(0, "Personalizado")
 }
 
+@Serializable
 enum class EstadoPeriodo { ACTIVO, DIFERIDO, COMPLETADO, CANCELADO, CONGELADO }
 
+@Serializable
 data class PeriodoFacturable(
-    val id: String = "", // Removido @DocumentId
+    val id: String = "",
     val entrenadorId: String = "",
     val atletaId: String = "",
     val tipoPlan: String = "",
@@ -25,8 +33,9 @@ data class PeriodoFacturable(
     val diasRestantesAlCongelar: Long = 0
 )
 
+@Serializable
 data class Usuario(
-    val id: String = "", // Removido @DocumentId
+    val id: String = "",
     val rol: RolUsuario = RolUsuario.ATLETA,
     val entrenadorId: String? = null,
     val estadoSuscripcion: EstadoSuscripcion = EstadoSuscripcion.HUERFANO,
@@ -38,7 +47,7 @@ data class Usuario(
     val apellidos: String = "",
     val tipoDocumento: String = "",
     val numeroDocumento: String = "",
-    val fechaNacimiento: Long = 0L, // Cambiado Date -> Long
+    val fechaNacimiento: Long = 0L,
     val tipoSangre: String = "",
     val nacionalidad: String = "",
     val telefono: String = "",
@@ -46,7 +55,7 @@ data class Usuario(
     val fechaInicioSuscripcion: Long? = null,
     val vencimientoSuscripcion: Long? = null,
     val correo: String = "",
-    val fechaCreacion: Long = 0L, // Cambiado Date -> Long
+    val fechaCreacion: Long = 0L,
     val saldoMilisegundosRestantes: Long? = null,
     val motivoPausa: String? = null,
     val requiereCambioContrasena: Boolean = false,
