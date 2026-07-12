@@ -46,14 +46,25 @@ class AtletaRepository {
         }
     } catch (e: Exception) { null }
 
-    suspend fun obtenerHistorialValoraciones(atletaId: String): List<ValoracionFisica> = try {
-        val snapshot = usersRef.document(atletaId).collection("valoraciones")
-            .orderBy("fechaRegistro", Direction.DESCENDING).get()
-
-        snapshot.documents.map { doc ->
-            doc.data<ValoracionFisica>().copy(id = doc.id)
+    suspend fun obtenerHistorialValoraciones(atletaId: String): List<ValoracionFisica> {
+        return try {
+            // 🚀 CORREGIDO: Usamos 'usersRef' que ya apunta a db.collection("users")
+            usersRef.document(atletaId)
+                .collection("valoraciones")
+                .orderBy("fechaRegistro", Direction.DESCENDING) // Trae los más recientes primero
+                .get()
+                .documents
+                .map { documentSnapshot ->
+                    val valoracion = documentSnapshot.data<ValoracionFisica>()
+                    // Inyectamos el ID del documento de Firestore dentro de la data class KMP
+                    valoracion.copy(id = documentSnapshot.id)
+                }
+        } catch (e: Exception) {
+            // Imprime la traza en el Logcat para que puedas ver si hay fallos de conexión o reglas
+            e.printStackTrace()
+            emptyList()
         }
-    } catch (e: Exception) { emptyList() }
+    }
 
     suspend fun guardarValoracion(atletaId: String, valoracion: ValoracionFisica): Boolean = try {
         // 🔥 Corrección: Se estampa la marca de tiempo usando getCurrentTimeMillis() en lugar de Date()

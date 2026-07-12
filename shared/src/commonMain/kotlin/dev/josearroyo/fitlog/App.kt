@@ -15,6 +15,9 @@ import dev.josearroyo.fitlog.ui.login.CambiarContrasenaScreen
 import dev.josearroyo.fitlog.ui.splash.SplashScreen
 import dev.josearroyo.fitlog.ui.entrenador.EntrenadorMainScreen
 import dev.josearroyo.fitlog.ui.entrenador.AtletaDetailScreen
+import dev.josearroyo.fitlog.ui.entrenador.AddValoracionScreen
+// 🚀 IMPORTANTE: Importamos el historial desde su paquete correspondiente (atleta)
+import dev.josearroyo.fitlog.ui.atleta.HistorialValoracionScreen
 
 enum class Screen {
     Splash,
@@ -22,7 +25,9 @@ enum class Screen {
     CambiarPassword,
     DashboardEntrenador,
     DashboardAtleta,
-    DetalleAtleta
+    DetalleAtleta,
+    HistorialValoracion, // 🚀 1. Agregado el estado del historial al Enum
+    AgregarValoracion
 }
 
 @Composable
@@ -90,7 +95,9 @@ fun App() {
                         currentScreen = Screen.DashboardEntrenador
                     },
                     onNavigateToHistorialValoraciones = { id ->
-                        println("Navegación incremental KMP: Historial de Valoraciones para atleta ID: $id")
+                        // 🚀 2. CORREGIDO: Al pulsar valoración, viajamos primero al historial
+                        selectedAtletaId = id
+                        currentScreen = Screen.HistorialValoracion
                     },
                     onNavigateToHistorialHabitos = { id ->
                         println("Navegación incremental KMP: Historial de Hábitos para atleta ID: $id")
@@ -106,6 +113,32 @@ fun App() {
                     },
                     onNavigateToEditRutina = { idAtleta, idRutina ->
                         println("Navegación incremental KMP: Editar rutina asignada ID: $idRutina del atleta $idAtleta")
+                    }
+                )
+            }
+
+            // 🚀 3. NUEVA RAMA: Agregamos el renderizado del Historial de Valoraciones
+            Screen.HistorialValoracion -> {
+                HistorialValoracionScreen(
+                    atletaId = selectedAtletaId,
+                    onBack = {
+                        // Al darle atrás en el historial, regresamos al Expediente del Atleta
+                        currentScreen = Screen.DetalleAtleta
+                    },
+                    onNavigateToNuevaValoracion = { id ->
+                        // Al pulsar el botón flotante (+), viajamos al formulario de creación
+                        selectedAtletaId = id
+                        currentScreen = Screen.AgregarValoracion
+                    }
+                )
+            }
+
+            Screen.AgregarValoracion -> {
+                AddValoracionScreen(
+                    atletaId = selectedAtletaId,
+                    onBack = {
+                        // 🚀 4. CORREGIDO: Al guardar o dar atrás, regresamos al Historial (para ver el nuevo registro), no al detalle
+                        currentScreen = Screen.HistorialValoracion
                     }
                 )
             }

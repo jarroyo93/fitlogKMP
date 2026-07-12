@@ -12,3 +12,4 @@ expect fun esMismoDia(timestamp1: Long, timestamp2: Long): Boolean
 expect fun formatearHora(timestamp: Long): String
 expect fun formatearFechaHora(timestamp: Long): String
 expect fun esCumpleanosHoy(fechaNacimiento: Long): Boolean
+expect fun formatearFechaHistorial(timestamp: Long): String

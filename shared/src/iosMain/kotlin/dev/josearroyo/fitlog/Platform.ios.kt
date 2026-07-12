@@ -75,3 +75,12 @@ actual fun esCumpleanosHoy(fechaNacimiento: Long): Boolean {
 
     return compHoy.month == compNac.month && compHoy.day == compNac.day
 }
+
+actual fun formatearFechaHistorial(timestamp: Long): String {
+    val date = platform.Foundation.NSDate.dateWithTimeIntervalSince1970(timestamp / 1000.0)
+    val formatter = platform.Foundation.NSDateFormatter().apply {
+        dateFormat = "dd 'de' MMMM, yyyy"
+        locale = platform.Foundation.NSLocale.localeWithLocaleIdentifier("es_ES")
+    }
+    return formatter.stringFromDate(date)
+}

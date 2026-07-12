@@ -49,3 +49,9 @@ actual fun esCumpleanosHoy(fechaNacimiento: Long): Boolean {
     return calHoy.get(java.util.Calendar.MONTH) == calNac.get(java.util.Calendar.MONTH) &&
             calHoy.get(java.util.Calendar.DAY_OF_MONTH) == calNac.get(java.util.Calendar.DAY_OF_MONTH)
 }
+
+actual fun formatearFechaHistorial(timestamp: Long): String {
+    val date = java.util.Date(timestamp)
+    val sdf = java.text.SimpleDateFormat("dd 'de' MMMM, yyyy", java.util.Locale("es", "ES"))
+    return sdf.format(date)
+}

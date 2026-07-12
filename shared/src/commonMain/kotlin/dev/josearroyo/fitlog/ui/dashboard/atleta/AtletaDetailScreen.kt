@@ -1,7 +1,6 @@
 package dev.josearroyo.fitlog.ui.entrenador
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
@@ -21,7 +20,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import dev.josearroyo.fitlog.data.model.EstadoSuscripcion
-import dev.josearroyo.fitlog.viewmodel.entrenador.AtletaDetailViewModel
+import dev.josearroyo.fitlog.viewmodel.atleta.AtletaDetailViewModel
 
 private val FondoOscuro = Color(0xFF241B3C)
 private val NaranjaAcento = Color(0xFFFF9F6D)

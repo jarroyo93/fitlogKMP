@@ -1,4 +1,4 @@
-package dev.josearroyo.fitlog.viewmodel.entrenador
+package dev.josearroyo.fitlog.viewmodel.atleta
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
