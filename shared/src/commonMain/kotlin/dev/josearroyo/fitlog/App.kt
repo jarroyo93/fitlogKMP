@@ -13,15 +13,16 @@ import androidx.compose.ui.text.style.TextAlign
 import dev.josearroyo.fitlog.ui.login.LoginScreen
 import dev.josearroyo.fitlog.ui.login.CambiarContrasenaScreen
 import dev.josearroyo.fitlog.ui.splash.SplashScreen
-// 🚀 IMPORTANTE: Importa tu contenedor principal migrado
 import dev.josearroyo.fitlog.ui.entrenador.EntrenadorMainScreen
+import dev.josearroyo.fitlog.ui.entrenador.AtletaDetailScreen
 
 enum class Screen {
     Splash,
     Login,
     CambiarPassword,
     DashboardEntrenador,
-    DashboardAtleta
+    DashboardAtleta,
+    DetalleAtleta
 }
 
 @Composable
@@ -29,6 +30,7 @@ fun App() {
     MaterialTheme {
         var currentScreen by remember { mutableStateOf(Screen.Splash) }
         var currentUid by remember { mutableStateOf("") }
+        var selectedAtletaId by remember { mutableStateOf("") }
 
         when (currentScreen) {
             Screen.Splash -> {
@@ -59,28 +61,55 @@ fun App() {
                 )
             }
 
-            // 🚀 CORREGIDO: Inyectamos la pantalla real con sus acciones
             Screen.DashboardEntrenador -> {
                 EntrenadorMainScreen(
                     uid = currentUid,
-                    onNavigateToAddAtleta = { entId -> println("Navegar a Agregar Atleta para Coach: $entId") },
-                    onNavigateToAtletaDetail = { atletaId -> println("Navegar a detalle del Atleta: $atletaId") },
-                    onNavigateToAddExercise = { entId -> println("Navegar a Agregar Ejercicio") },
-                    onNavigateToAddPlantilla = { entId -> println("Navegar a Agregar Plantilla") },
-                    onNavigateToEditExercise = { entId, ejId -> println("Editar ejercicio") },
-                    onNavigateToEditPlantilla = { entId, planId -> println("Editar plantilla") },
-                    onNavigateToEditarDatosPersonales = { entId -> println("Editar datos personales") },
-                    onNavigateToHistorialFacturacion = { atletaId, entId -> println("Ver facturas del atleta") },
-                    onNavigateToInformeGlobalFacturacion = { entId -> println("Ver informe global") },
+                    onNavigateToAtletaDetail = { atletaId ->
+                        selectedAtletaId = atletaId
+                        currentScreen = Screen.DetalleAtleta
+                    },
+                    onNavigateToAddAtleta = { /* ... */ },
+                    onNavigateToAddExercise = { /* ... */ },
+                    onNavigateToAddPlantilla = { /* ... */ },
+                    onNavigateToEditExercise = { _, _ -> },
+                    onNavigateToEditPlantilla = { _, _ -> },
+                    onNavigateToEditarDatosPersonales = { _ -> },
+                    onNavigateToHistorialFacturacion = { _, _ -> },
+                    onNavigateToInformeGlobalFacturacion = { _ -> },
                     onLogout = {
-                        // Limpiamos los estados de sesión y retornamos al Login de forma segura
                         currentUid = ""
                         currentScreen = Screen.Login
                     }
                 )
             }
 
-            // 🚀 EVITAMOS PANTALLA BLANCA EN ATLETAS: Colocamos un esqueleto estilizado temporal
+            Screen.DetalleAtleta -> {
+                AtletaDetailScreen(
+                    atletaId = selectedAtletaId,
+                    onBack = {
+                        currentScreen = Screen.DashboardEntrenador
+                    },
+                    onNavigateToHistorialValoraciones = { id ->
+                        println("Navegación incremental KMP: Historial de Valoraciones para atleta ID: $id")
+                    },
+                    onNavigateToHistorialHabitos = { id ->
+                        println("Navegación incremental KMP: Historial de Hábitos para atleta ID: $id")
+                    },
+                    onNavigateToPerfil = { id ->
+                        println("Navegación incremental KMP: Ver Perfil completo del atleta ID: $id")
+                    },
+                    onNavigateToRendimiento = { id ->
+                        println("Navegación incremental KMP: Ver Diario de Cargas del atleta ID: $id")
+                    },
+                    onNavigateToSeleccionarPlantilla = { idAtleta, idEntrenador ->
+                        println("Navegación incremental KMP: Asignar plantilla al atleta $idAtleta por el coach $idEntrenador")
+                    },
+                    onNavigateToEditRutina = { idAtleta, idRutina ->
+                        println("Navegación incremental KMP: Editar rutina asignada ID: $idRutina del atleta $idAtleta")
+                    }
+                )
+            }
+
             Screen.DashboardAtleta -> {
                 Box(
                     modifier = Modifier
