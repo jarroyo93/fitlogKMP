@@ -47,7 +47,11 @@ data class Usuario(
     val apellidos: String = "",
     val tipoDocumento: String = "",
     val numeroDocumento: String = "",
+
+    // 🚀 APLICAMOS EL SERIALIZADOR AQUÍ:
+    @Serializable(with = TimestampLongSerializer::class)
     val fechaNacimiento: Long = 0L,
+
     val tipoSangre: String = "",
     val nacionalidad: String = "",
     val telefono: String = "",
@@ -55,7 +59,11 @@ data class Usuario(
     val fechaInicioSuscripcion: Long? = null,
     val vencimientoSuscripcion: Long? = null,
     val correo: String = "",
+
+    // 🚀 Y TAMBIÉN AQUÍ (Ya que en tu app nativa fechaCreacion era de tipo Date/Timestamp):
+    @Serializable(with = TimestampLongSerializer::class)
     val fechaCreacion: Long = 0L,
+
     val saldoMilisegundosRestantes: Long? = null,
     val motivoPausa: String? = null,
     val requiereCambioContrasena: Boolean = false,

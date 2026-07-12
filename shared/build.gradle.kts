@@ -5,6 +5,7 @@ plugins {
     alias(libs.plugins.androidMultiplatformLibrary)
     alias(libs.plugins.composeMultiplatform)
     alias(libs.plugins.composeCompiler)
+    alias(libs.plugins.kotlin.serialization)
 }
 
 kotlin {
@@ -52,6 +53,7 @@ kotlin {
             implementation(libs.firebase.auth)
             implementation(libs.firebase.firestore)
             implementation(compose.materialIconsExtended)
+            implementation(libs.androidx.navigation.compose)
         }
         commonTest.dependencies {
             implementation(libs.kotlin.test)

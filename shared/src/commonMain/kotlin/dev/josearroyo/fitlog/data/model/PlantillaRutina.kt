@@ -1,7 +1,9 @@
 package dev.josearroyo.fitlog.data.model
 
+import kotlinx.serialization.Serializable
 
 
+@Serializable
 data class ElementoRutina(
     val ejercicioId: String = "",
     val nombreEjercicio: String = "",
@@ -10,7 +12,7 @@ data class ElementoRutina(
     val notas: String = "",
     val ordenSecuencia: Int = 0
 )
-
+@Serializable
 data class PlantillaRutina(
     val id: String = "", // Removido @DocumentId
     val nombre: String = "",

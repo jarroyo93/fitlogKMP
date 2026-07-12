@@ -1,7 +1,9 @@
-package dev.josearroyo.fitlog.data.model // 👈 Corregido para que coincida con tus nuevas carpetas
+package dev.josearroyo.fitlog.data.model
 
-// ¡Ya no necesitamos ningún import de java.util.*!
+import kotlinx.serialization.Serializable
 
+
+@Serializable
 data class CicloEntrenamiento(
     val id: String = "", // 👈 Recomendación: Inicializar vacío y usar el ID autogenerado de Firebase
     val atletaId: String = "",

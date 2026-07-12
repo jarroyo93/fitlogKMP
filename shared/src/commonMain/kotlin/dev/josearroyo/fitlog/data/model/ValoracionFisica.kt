@@ -1,8 +1,11 @@
 package dev.josearroyo.fitlog.data.model
 
+import kotlinx.serialization.Serializable
+
 enum class NivelExperiencia { PRINCIPIANTE, MEDIO, AVANZADO }
 enum class MetodoComposicionCorporal { ANTROPOMETRIA, BIOIMPEDANCIA, AMBOS }
 
+@Serializable
 data class ValoracionFisica(
     val id: String = "", // Removido @DocumentId
     val fechaRegistro: Long = 0L, // Cambiado Date -> Long

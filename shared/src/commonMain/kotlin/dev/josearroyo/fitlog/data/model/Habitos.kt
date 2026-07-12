@@ -1,5 +1,8 @@
 package dev.josearroyo.fitlog.data.model
 
+import kotlinx.serialization.Serializable
+
+@Serializable
 data class Habitos(
     var id: String = "",
     val actividadesPrincipales: String = "",

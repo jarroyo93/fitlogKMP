@@ -1,6 +1,8 @@
 package dev.josearroyo.fitlog.data.model
 
+import kotlinx.serialization.Serializable
 
+@Serializable
 data class SesionEntrenamiento(
     var id: String = "", // Removido @DocumentId
     val rutinaAsignadaId: String = "",
@@ -12,7 +14,7 @@ data class SesionEntrenamiento(
     val totalRepsEfectivasLogradas: Int = 0,
     val porcentajeVolumenSesion: Double = 0.0
 )
-
+@Serializable
 data class EjercicioRealizado(
     val ejercicioGlobalId: String = "",
     val nombreEjercicio: String = "",
@@ -22,7 +24,7 @@ data class EjercicioRealizado(
     val fueSaltado: Boolean = false,
     val justificacionSalto: String = ""
 )
-
+@Serializable
 data class SerieRealizada(
     val numeroSerie: Int = 1,
     val tipoSerie: TipoSerie = TipoSerie.EFECTIVA,

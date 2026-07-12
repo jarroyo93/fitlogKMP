@@ -1,5 +1,8 @@
 package dev.josearroyo.fitlog.data.model
 
+import kotlinx.serialization.Serializable
+
+@Serializable
 data class RutinaAsignada(
     var id: String = "",
     val nombreRutina: String = "",
@@ -10,6 +13,7 @@ data class RutinaAsignada(
     val ultimaVezEjecutada: Long? = null // Cambiado Date? -> Long?
 )
 
+@Serializable
 data class DiaEntrenamientoAsignado(
     val idDia: String = "", // Cambiado UUID -> String vacío
     val plantillaOriginalId: String = "",
@@ -19,6 +23,7 @@ data class DiaEntrenamientoAsignado(
     val ultimaVezEjecutada: Long? = null // Cambiado Date? -> Long?
 )
 
+@Serializable
 data class EjercicioAsignado(
     val idInterno: String = "", // Cambiado UUID -> String vacío
     val ejercicioGlobalId: String = "",

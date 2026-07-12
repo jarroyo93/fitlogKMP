@@ -62,3 +62,5 @@ firebaseAppDistribution {
     releaseNotes = "Versión 1.1.6: Transición oficial de FitLog a arquitectura unificada Compose Multiplatform."
     serviceCredentialsFile = file("firebase-credentials.json").absolutePath
 }
+
+plugins.apply("com.google.gms.google-services")

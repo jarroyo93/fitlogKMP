@@ -13,6 +13,7 @@ composeMultiplatform = "1.11.1"
 junit = "4.13.2"
 kotlin = "2.4.0"
 material3 = "1.11.0-alpha07"
+androidx-navigation = "2.8.0-alpha10"
 
 # VERSIONES DE FIREBASE MULTIPLATAFORMA Y HERRAMIENTAS
 firebaseKmp = "2.4.0"
@@ -36,6 +37,7 @@ compose-material3 = { module = "org.jetbrains.compose.material3:material3", vers
 compose-ui = { module = "org.jetbrains.compose.ui:ui", version.ref = "composeMultiplatform" }
 compose-components-resources = { module = "org.jetbrains.compose.components:components-resources", version.ref = "composeMultiplatform" }
 compose-uiToolingPreview = { module = "org.jetbrains.compose.ui:ui-tooling-preview", version.ref = "composeMultiplatform" }
+androidx-navigation-compose = { module = "org.jetbrains.androidx.navigation:navigation-compose", version.ref = "androidx-navigation" }
 
 # LIBRERÍAS DE FIREBASE COMPARTIDAS (GITLIVE)
 firebase-auth = { module = "dev.gitlive:firebase-auth", version.ref = "firebaseKmp" }
@@ -48,7 +50,6 @@ composeMultiplatform = { id = "org.jetbrains.compose", version.ref = "composeMul
 composeCompiler = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
 kotlinMultiplatform = { id = "org.jetbrains.kotlin.multiplatform", version.ref = "kotlin" }
 kotlinAndroid = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }
-
-# PLUGINS ADICIONALES PARA COMPLEMENTOS DE FIREBASE
 googleServices = { id = "com.google.gms.google-services", version = "4.4.4" }
 firebaseAppDistribution = { id = "com.google.firebase.appdistribution", version.ref = "firebaseAppDistribution" }
+kotlin-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }
