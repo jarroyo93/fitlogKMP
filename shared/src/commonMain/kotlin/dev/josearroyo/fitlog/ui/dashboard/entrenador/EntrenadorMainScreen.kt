@@ -1,6 +1,5 @@
 package dev.josearroyo.fitlog.ui.entrenador
 
-
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
@@ -29,6 +28,7 @@ import dev.josearroyo.fitlog.repository.AuthRepository
 import dev.josearroyo.fitlog.ui.navigation.BottomNavItem
 import dev.josearroyo.fitlog.viewmodel.entrenador.PerfilEntrenadorViewModel
 import kotlinx.coroutines.launch
+import androidx.compose.ui.text.style.TextAlign
 
 private val FondoOscuro = Color(0xFF241B3C)
 private val NaranjaAcento = Color(0xFFFF9F6D)
@@ -56,7 +56,7 @@ fun EntrenadorMainScreen(
             .fillMaxSize()
             .background(FondoOscuro)
     ) {
-        // 1. Cabecera Estática Superior
+        // 1. Cabecera Estática Superior (FitLog global)
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -84,24 +84,30 @@ fun EntrenadorMainScreen(
                 startDestination = BottomNavItem.Atletas.route,
                 modifier = Modifier.fillMaxSize()
             ) {
+                // 🚀 PESTAÑA 1 CONECTADA: Despliega el Dashboard Real con Firestore Multiplataforma
                 composable(BottomNavItem.Atletas.route) {
-                    // Aquí se inyectará tu listado principal de atletas cuando lo migremos
-                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        Text("Listado de Atletas", color = Color.White)
-                    }
+                    EntrenadorDashboardScreen(
+                        entrenadorId = uid,
+                        onAtletaClick = { atletaId ->
+                            onNavigateToAtletaDetail(atletaId)
+                        },
+                        onAddAtletaClick = {
+                            onNavigateToAddAtleta(uid)
+                        }
+                    )
                 }
 
                 composable(BottomNavItem.Biblioteca.route) {
-                    // Aquí irá el gestor de Ejercicios y Plantillas de Rutinas
+                    // Mantenemos el esqueleto seguro hasta que migremos tus plantillas y ejercicios
                     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        Text("Biblioteca de Rutinas", color = Color.White)
+                        Text("Biblioteca de Rutinas\n(Próxima migración)", color = Color.White, textAlign = TextAlign.Center)
                     }
                 }
 
                 composable(BottomNavItem.Facturacion.route) {
-                    // Historial contable global
+                    // Historial contable global (Esqueleto seguro)
                     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        Text("Módulo de Facturación", color = Color.White)
+                        Text("Módulo de Facturación\n(Próxima migración)", color = Color.White, textAlign = TextAlign.Center)
                     }
                 }
 
@@ -135,11 +141,8 @@ fun PerfilEntrenadorTab(
     onEditDatosPersonalesClick: () -> Unit
 ) {
     val authRepository = remember { AuthRepository() }
-
-    // 🚀 CAMBIADO AL NUEVO NOMBRE DE CLAVE COMPARTIDA:
     val perfilViewModel: PerfilEntrenadorViewModel = viewModel { PerfilEntrenadorViewModel() }
     val uiState by perfilViewModel.uiState.collectAsState()
-
     val coroutineScope = rememberCoroutineScope()
 
     var especialidad by remember { mutableStateOf("") }
@@ -279,7 +282,6 @@ fun PerfilEntrenadorTab(
 
         Spacer(modifier = Modifier.height(8.dp))
         TextButton(onClick = {
-            // 🚀 Lanzamos la corrutina de forma segura para ejecutar el logout suspendido
             coroutineScope.launch {
                 authRepository.logout()
                 onLogout()
@@ -321,12 +323,10 @@ fun EntrenadorBottomNavigationBar(navController: NavHostController) {
                     unselectedTextColor = TextoSecundario
                 ),
                 onClick = {
-                    // 🚀 Obtenemos de forma segura la ruta (String) del inicio de la gráfica
                     val startRoute = navController.graph.findStartDestination().route
 
                     navController.navigate(item.route) {
                         if (startRoute != null) {
-                            // En KMP, popUpTo recibe el nombre de la ruta directamente
                             popUpTo(startRoute) { saveState = true }
                         }
                         launchSingleTop = true

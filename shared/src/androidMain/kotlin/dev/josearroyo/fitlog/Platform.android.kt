@@ -37,3 +37,15 @@ actual fun formatearHora(timestamp: Long): String {
     val date = java.util.Date(timestamp)
     return SimpleDateFormat("hh:mm a", Locale("es", "ES")).format(date)
 }
+
+actual fun formatearFechaHora(timestamp: Long): String {
+    val date = java.util.Date(timestamp)
+    return SimpleDateFormat("dd/MM/yyyy hh:mm a", Locale("es", "ES")).format(date)
+}
+
+actual fun esCumpleanosHoy(fechaNacimiento: Long): Boolean {
+    val calHoy = java.util.Calendar.getInstance()
+    val calNac = java.util.Calendar.getInstance().apply { timeInMillis = fechaNacimiento }
+    return calHoy.get(java.util.Calendar.MONTH) == calNac.get(java.util.Calendar.MONTH) &&
+            calHoy.get(java.util.Calendar.DAY_OF_MONTH) == calNac.get(java.util.Calendar.DAY_OF_MONTH)
+}

@@ -55,3 +55,23 @@ actual fun formatearHora(timestamp: Long): String {
     }
     return formatter.stringFromDate(date)
 }
+
+actual fun formatearFechaHora(timestamp: Long): String {
+    val date = NSDate.dateWithTimeIntervalSince1970(timestamp / 1000.0)
+    val formatter = NSDateFormatter().apply {
+        dateFormat = "dd/MM/yyyy hh:mm a"
+        locale = NSLocale(localeIdentifier = "es_ES")
+    }
+    return formatter.stringFromDate(date)
+}
+
+actual fun esCumpleanosHoy(fechaNacimiento: Long): Boolean {
+    val calendar = platform.Foundation.NSCalendar.currentCalendar
+    val hoy = platform.Foundation.NSDate()
+    val nac = platform.Foundation.NSDate.dateWithTimeIntervalSince1970(fechaNacimiento / 1000.0)
+
+    val compHoy = calendar.components(platform.Foundation.NSCalendarUnitMonth or platform.Foundation.NSCalendarUnitDay, fromDate = hoy)
+    val compNac = calendar.components(platform.Foundation.NSCalendarUnitMonth or platform.Foundation.NSCalendarUnitDay, fromDate = nac)
+
+    return compHoy.month == compNac.month && compHoy.day == compNac.day
+}

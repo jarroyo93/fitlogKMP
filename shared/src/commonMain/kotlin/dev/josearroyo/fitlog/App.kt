@@ -1,10 +1,20 @@
 package dev.josearroyo.fitlog
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.style.TextAlign
 import dev.josearroyo.fitlog.ui.login.LoginScreen
 import dev.josearroyo.fitlog.ui.login.CambiarContrasenaScreen
-import dev.josearroyo.fitlog.ui.splash.SplashScreen // 🔥 Importamos tu nuevo Splash
+import dev.josearroyo.fitlog.ui.splash.SplashScreen
+// 🚀 IMPORTANTE: Importa tu contenedor principal migrado
+import dev.josearroyo.fitlog.ui.entrenador.EntrenadorMainScreen
 
 enum class Screen {
     Splash,
@@ -22,7 +32,6 @@ fun App() {
 
         when (currentScreen) {
             Screen.Splash -> {
-                // 🔥 Se ejecuta la animación y al finalizar cambia el estado al Login de inmediato
                 SplashScreen(
                     onSplashFinished = {
                         currentScreen = Screen.Login
@@ -49,11 +58,42 @@ fun App() {
                     }
                 )
             }
+
+            // 🚀 CORREGIDO: Inyectamos la pantalla real con sus acciones
             Screen.DashboardEntrenador -> {
-                // Tu pantalla de inicio de Entrenador migrada posteriormente
+                EntrenadorMainScreen(
+                    uid = currentUid,
+                    onNavigateToAddAtleta = { entId -> println("Navegar a Agregar Atleta para Coach: $entId") },
+                    onNavigateToAtletaDetail = { atletaId -> println("Navegar a detalle del Atleta: $atletaId") },
+                    onNavigateToAddExercise = { entId -> println("Navegar a Agregar Ejercicio") },
+                    onNavigateToAddPlantilla = { entId -> println("Navegar a Agregar Plantilla") },
+                    onNavigateToEditExercise = { entId, ejId -> println("Editar ejercicio") },
+                    onNavigateToEditPlantilla = { entId, planId -> println("Editar plantilla") },
+                    onNavigateToEditarDatosPersonales = { entId -> println("Editar datos personales") },
+                    onNavigateToHistorialFacturacion = { atletaId, entId -> println("Ver facturas del atleta") },
+                    onNavigateToInformeGlobalFacturacion = { entId -> println("Ver informe global") },
+                    onLogout = {
+                        // Limpiamos los estados de sesión y retornamos al Login de forma segura
+                        currentUid = ""
+                        currentScreen = Screen.Login
+                    }
+                )
             }
+
+            // 🚀 EVITAMOS PANTALLA BLANCA EN ATLETAS: Colocamos un esqueleto estilizado temporal
             Screen.DashboardAtleta -> {
-                // Tu pantalla de inicio de Atleta migrada posteriormente
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(Color(0xFF241B3C)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = "Panel del Atleta\n(Próxima migración modular)",
+                        color = Color.White,
+                        textAlign = TextAlign.Center
+                    )
+                }
             }
         }
     }
