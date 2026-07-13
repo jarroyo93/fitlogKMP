@@ -29,7 +29,7 @@ import dev.josearroyo.fitlog.ui.dashboard.ProgresoAtletaScreen
 import dev.josearroyo.fitlog.ui.dashboard.EditRutinaAsignadaScreen
 import dev.josearroyo.fitlog.ui.dashboard.entrenador.AddEjercicioScreen
 import dev.josearroyo.fitlog.ui.dashboard.entrenador.AddPlantillaScreen
-import dev.josearroyo.fitlog.ui.dashboard.entrenador.BibliotecaScreen // 🚀 NUEVA IMPORTACIÓN
+import dev.josearroyo.fitlog.ui.dashboard.entrenador.BibliotecaScreen
 
 @Composable
 fun AppNavigation() {
@@ -83,7 +83,7 @@ fun AppNavigation() {
         }
 
         // ============================================================
-        // 🏛️ PANEL DEL ENTRENADOR (DASHBOARD)
+        // 🏛️ PANEL DEL ENTRENADOR (DASHBOARD CO-CENTRAL)
         // ============================================================
         composable(
             route = "dashboard_entrenador/{uid}",
@@ -93,7 +93,7 @@ fun AppNavigation() {
             EntrenadorMainScreen(
                 uid = uid,
                 onNavigateToAtletaDetail = { atletaId ->
-                    navController.navigate("atleta_detail/$atletaId")
+                    navController.navigate("atleta_detail/$ atletaId")
                 },
                 onNavigateToAddExercise = { id ->
                     navController.navigate("add_ejercicio/$id")
@@ -109,7 +109,12 @@ fun AppNavigation() {
                 },
                 onNavigateToAddAtleta = { /* ... */ },
                 onNavigateToEditarDatosPersonales = { _ -> },
-                onNavigateToHistorialFacturacion = { _, _ -> },
+
+                // 🚀 CORREGIDO: Como aún no implementas el Historial individual,
+                // dejamos el callback listo con un log impreso en consola. Así evitamos el bucle de UI.
+                onNavigateToHistorialFacturacion = { atletaId, _ ->
+                    println("Navegación incremental KMP: Abrir historial de cobros del atleta $atletaId")
+                },
                 onNavigateToInformeGlobalFacturacion = { _ -> },
                 onLogout = {
                     navController.navigate("login") {
@@ -228,7 +233,7 @@ fun AppNavigation() {
         }
 
         // ============================================================
-        // 📚 MÓDULO DE LA BIBLIOTECA (EJERCICIOS Y PLANTILLAS CO-CENTRAL)
+        // 📚 MÓDULO DE LA BIBLIOTECA (EJERCICIOS Y PLANTILLAS)
         // ============================================================
         composable(
             route = "biblioteca/{entrenadorId}",
@@ -265,6 +270,9 @@ fun AppNavigation() {
             val planId = backStackEntry.arguments?.getString("plantillaId") ?: ""
             AddPlantillaScreen(entrenadorId = entId, plantillaId = planId, onBack = { navController.popBackStack() })
         }
+
+        // 🚀 SE ELIMINÓ EL BLOQUE COMPOSABLE "facturacion_general" DE AQUÍ
+        // ya que la pantalla ahora vive de forma nativa dentro de los Tabs.
 
         // ============================================================
         // 🏋️ PANEL INTERNO DEL ATLETA (FALLBACK)

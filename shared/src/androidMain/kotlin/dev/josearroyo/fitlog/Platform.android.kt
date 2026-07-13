@@ -11,17 +11,29 @@ class AndroidPlatform : Platform {
 
 actual fun getPlatform(): Platform = AndroidPlatform()
 
-// 🔥 AGREGADO: Implementación nativa para la JVM/Android
 actual fun getCurrentTimeMillis(): Long = System.currentTimeMillis()
 
 actual fun calcularFechaCierreCiclo(inicioMilis: Long): Long {
-    val calendar = java.util.Calendar.getInstance().apply {
+    val calendar = Calendar.getInstance().apply {
         timeInMillis = inicioMilis
-        add(java.util.Calendar.DAY_OF_YEAR, 7)
-        set(java.util.Calendar.HOUR_OF_DAY, 23)
-        set(java.util.Calendar.MINUTE, 59)
-        set(java.util.Calendar.SECOND, 59)
-        set(java.util.Calendar.MILLISECOND, 999)
+        add(Calendar.DAY_OF_YEAR, 7)
+        set(Calendar.HOUR_OF_DAY, 23)
+        set(Calendar.MINUTE, 59)
+        set(Calendar.SECOND, 59)
+        set(Calendar.MILLISECOND, 999)
+    }
+    return calendar.timeInMillis
+}
+
+// 🔥 Nueva implementación para Android:
+actual fun calcularFechaFinSuscripcion(inicioMilis: Long, dias: Int): Long {
+    val calendar = Calendar.getInstance().apply {
+        timeInMillis = inicioMilis
+        add(Calendar.DAY_OF_YEAR, dias)
+        set(Calendar.HOUR_OF_DAY, 23)
+        set(Calendar.MINUTE, 59)
+        set(Calendar.SECOND, 59)
+        set(Calendar.MILLISECOND, 999)
     }
     return calendar.timeInMillis
 }
@@ -43,15 +55,21 @@ actual fun formatearFechaHora(timestamp: Long): String {
     return SimpleDateFormat("dd/MM/yyyy hh:mm a", Locale("es", "ES")).format(date)
 }
 
+// 🔥 Nueva implementación para Android:
+actual fun formatearFechaCorto(timestamp: Long): String {
+    val date = java.util.Date(timestamp)
+    return SimpleDateFormat("dd/MM/yyyy", Locale("es", "ES")).format(date)
+}
+
 actual fun esCumpleanosHoy(fechaNacimiento: Long): Boolean {
-    val calHoy = java.util.Calendar.getInstance()
-    val calNac = java.util.Calendar.getInstance().apply { timeInMillis = fechaNacimiento }
-    return calHoy.get(java.util.Calendar.MONTH) == calNac.get(java.util.Calendar.MONTH) &&
-            calHoy.get(java.util.Calendar.DAY_OF_MONTH) == calNac.get(java.util.Calendar.DAY_OF_MONTH)
+    val calHoy = Calendar.getInstance()
+    val calNac = Calendar.getInstance().apply { timeInMillis = fechaNacimiento }
+    return calHoy.get(Calendar.MONTH) == calNac.get(Calendar.MONTH) &&
+            calHoy.get(Calendar.DAY_OF_MONTH) == calNac.get(Calendar.DAY_OF_MONTH)
 }
 
 actual fun formatearFechaHistorial(timestamp: Long): String {
     val date = java.util.Date(timestamp)
-    val sdf = java.text.SimpleDateFormat("dd 'de' MMMM, yyyy", java.util.Locale("es", "ES"))
+    val sdf = SimpleDateFormat("dd 'de' MMMM, yyyy", Locale("es", "ES"))
     return sdf.format(date)
 }

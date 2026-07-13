@@ -5,7 +5,6 @@ import platform.Foundation.NSCalendarUnitDay
 import platform.Foundation.NSCalendarUnitMonth
 import platform.Foundation.NSCalendarUnitYear
 import platform.UIKit.UIDevice
-// 🔥 IMPORTS OBLIGATORIOS PARA EL MANEJO DE TIEMPO EN APPLE NATIVO:
 import platform.Foundation.NSDate
 import platform.Foundation.NSDateFormatter
 import platform.Foundation.NSLocale
@@ -19,22 +18,35 @@ class IOSPlatform: Platform {
 
 actual fun getPlatform(): Platform = IOSPlatform()
 
-// 🔥 AGREGADO: Implementación nativa para el ecosistema Apple (Objective-C/Swift Runtime)
 actual fun getCurrentTimeMillis(): Long {
     return (NSDate().timeIntervalSince1970 * 1000).toLong()
 }
 
 actual fun calcularFechaCierreCiclo(inicioMilis: Long): Long {
-    val calendar = platform.Foundation.NSCalendar.currentCalendar
-    val date = platform.Foundation.NSDate.dateWithTimeIntervalSince1970(inicioMilis / 1000.0)
+    val calendar = NSCalendar.currentCalendar
+    val date = NSDate.dateWithTimeIntervalSince1970(inicioMilis / 1000.0)
     val datePlusSeven = calendar.dateByAddingUnit(
-        platform.Foundation.NSCalendarUnitDay,
+        NSCalendarUnitDay,
         value = 7,
         toDate = date,
         options = 0UL
     ) ?: date
     return calendar.dateBySettingHour(23, minute = 59, second = 59, ofDate = datePlusSeven, options = 0UL)
         ?.timeIntervalSince1970?.times(1000)?.toLong() ?: (inicioMilis + 604800000L)
+}
+
+// 🔥 Nueva implementación para iOS:
+actual fun calcularFechaFinSuscripcion(inicioMilis: Long, dias: Int): Long {
+    val calendar = NSCalendar.currentCalendar
+    val date = NSDate.dateWithTimeIntervalSince1970(inicioMilis / 1000.0)
+    val datePlusDays = calendar.dateByAddingUnit(
+        NSCalendarUnitDay,
+        value = dias.toLong(),
+        toDate = date,
+        options = 0UL
+    ) ?: date
+    return calendar.dateBySettingHour(23, minute = 59, second = 59, ofDate = datePlusDays, options = 0UL)
+        ?.timeIntervalSince1970?.times(1000)?.toLong() ?: (inicioMilis + (dias * 86400000L))
 }
 
 actual fun esMismoDia(timestamp1: Long, timestamp2: Long): Boolean {
@@ -66,22 +78,32 @@ actual fun formatearFechaHora(timestamp: Long): String {
     return formatter.stringFromDate(date)
 }
 
-actual fun esCumpleanosHoy(fechaNacimiento: Long): Boolean {
-    val calendar = platform.Foundation.NSCalendar.currentCalendar
-    val hoy = platform.Foundation.NSDate()
-    val nac = platform.Foundation.NSDate.dateWithTimeIntervalSince1970(fechaNacimiento / 1000.0)
+// 🔥 Nueva implementación para iOS:
+actual fun formatearFechaCorto(timestamp: Long): String {
+    val date = NSDate.dateWithTimeIntervalSince1970(timestamp / 1000.0)
+    val formatter = NSDateFormatter().apply {
+        dateFormat = "dd/MM/yyyy"
+        locale = NSLocale(localeIdentifier = "es_ES")
+    }
+    return formatter.stringFromDate(date)
+}
 
-    val compHoy = calendar.components(platform.Foundation.NSCalendarUnitMonth or platform.Foundation.NSCalendarUnitDay, fromDate = hoy)
-    val compNac = calendar.components(platform.Foundation.NSCalendarUnitMonth or platform.Foundation.NSCalendarUnitDay, fromDate = nac)
+actual fun esCumpleanosHoy(fechaNacimiento: Long): Boolean {
+    val calendar = NSCalendar.currentCalendar
+    val hoy = NSDate()
+    val nac = NSDate.dateWithTimeIntervalSince1970(fechaNacimiento / 1000.0)
+
+    val compHoy = calendar.components(NSCalendarUnitMonth or NSCalendarUnitDay, fromDate = hoy)
+    val compNac = calendar.components(NSCalendarUnitMonth or NSCalendarUnitDay, fromDate = nac)
 
     return compHoy.month == compNac.month && compHoy.day == compNac.day
 }
 
 actual fun formatearFechaHistorial(timestamp: Long): String {
-    val date = platform.Foundation.NSDate.dateWithTimeIntervalSince1970(timestamp / 1000.0)
-    val formatter = platform.Foundation.NSDateFormatter().apply {
+    val date = NSDate.dateWithTimeIntervalSince1970(timestamp / 1000.0)
+    val formatter = NSDateFormatter().apply {
         dateFormat = "dd 'de' MMMM, yyyy"
-        locale = platform.Foundation.NSLocale.localeWithLocaleIdentifier("es_ES")
+        locale = NSLocale.localeWithLocaleIdentifier("es_ES")
     }
     return formatter.stringFromDate(date)
 }

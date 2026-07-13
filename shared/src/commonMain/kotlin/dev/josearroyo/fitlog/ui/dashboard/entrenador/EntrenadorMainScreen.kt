@@ -30,6 +30,7 @@ import dev.josearroyo.fitlog.viewmodel.entrenador.PerfilEntrenadorViewModel
 import kotlinx.coroutines.launch
 import androidx.compose.ui.text.style.TextAlign
 import dev.josearroyo.fitlog.ui.dashboard.entrenador.BibliotecaScreen
+import dev.josearroyo.fitlog.ui.dashboard.FacturacionScreen // 🚀 NUEVA IMPORTACIÓN KMP
 
 private val FondoOscuro = Color(0xFF241B3C)
 private val NaranjaAcento = Color(0xFFFF9F6D)
@@ -47,7 +48,7 @@ fun EntrenadorMainScreen(
     onNavigateToEditPlantilla: (String, String) -> Unit,
     onNavigateToEditarDatosPersonales: (String) -> Unit,
     onLogout: () -> Unit,
-    onNavigateToHistorialFacturacion: (String, String) -> Unit,
+    onNavigateToHistorialFacturacion: (String, String) -> Unit, // (atletaId, entrenadorId)
     onNavigateToInformeGlobalFacturacion: (String) -> Unit
 ) {
     val bottomNavController = rememberNavController()
@@ -109,12 +110,23 @@ fun EntrenadorMainScreen(
                     )
                 }
 
+                // 🚀 PESTAÑA 3: Control General de Facturación y Cobros (MIGRADO)
                 composable(BottomNavItem.Facturacion.route) {
-                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        Text("Módulo de Facturación\n(Próxima migración)", color = Color.White, textAlign = TextAlign.Center)
-                    }
+                    FacturacionScreen(
+                        entrenadorId = uid,
+                        onNavigateToHistorial = { atletaId ->
+                            // Cuando el Coach hace click en "Historial" de un atleta, salimos del Tab
+                            // y abrimos la vista dedicada usando el Outer NavController de la App
+                            onNavigateToHistorialFacturacion(atletaId, uid)
+                        },
+                        onNavigateToInformeGlobal = {
+                            // Cuando decidas migrar el Reporte Contable, este callback te llevará allí
+                            onNavigateToInformeGlobalFacturacion(uid)
+                        }
+                    )
                 }
 
+                // 🚀 PESTAÑA 4: Perfil del Entrenador
                 composable(BottomNavItem.Perfil.route) {
                     PerfilEntrenadorTab(
                         uid = uid,
@@ -148,6 +160,8 @@ fun PerfilEntrenadorTab(
     val perfilViewModel: PerfilEntrenadorViewModel = viewModel { PerfilEntrenadorViewModel() }
     val uiState by perfilViewModel.uiState.collectAsState()
     val coroutineScope = rememberCoroutineScope()
+
+    // 🚀 LÍNEA CORREGIDA: Se eliminó el sombreado de variable que causaba el error
 
     var especialidad by remember { mutableStateOf("") }
     var biografia by remember { mutableStateOf("") }
