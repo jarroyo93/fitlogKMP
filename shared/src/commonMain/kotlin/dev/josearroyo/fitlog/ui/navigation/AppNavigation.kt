@@ -27,6 +27,9 @@ import dev.josearroyo.fitlog.ui.atleta.AddHabitosScreen
 import dev.josearroyo.fitlog.ui.dashboard.PerfilAtletaScreen
 import dev.josearroyo.fitlog.ui.dashboard.ProgresoAtletaScreen
 import dev.josearroyo.fitlog.ui.dashboard.EditRutinaAsignadaScreen
+import dev.josearroyo.fitlog.ui.dashboard.entrenador.AddEjercicioScreen
+import dev.josearroyo.fitlog.ui.dashboard.entrenador.AddPlantillaScreen
+import dev.josearroyo.fitlog.ui.dashboard.entrenador.BibliotecaScreen // 🚀 NUEVA IMPORTACIÓN
 
 @Composable
 fun AppNavigation() {
@@ -92,11 +95,19 @@ fun AppNavigation() {
                 onNavigateToAtletaDetail = { atletaId ->
                     navController.navigate("atleta_detail/$atletaId")
                 },
+                onNavigateToAddExercise = { id ->
+                    navController.navigate("add_ejercicio/$id")
+                },
+                onNavigateToAddPlantilla = { id ->
+                    navController.navigate("add_plantilla/$id")
+                },
+                onNavigateToEditExercise = { idEnt, idEj ->
+                    navController.navigate("edit_ejercicio/$idEnt/$idEj")
+                },
+                onNavigateToEditPlantilla = { idEnt, idPlan ->
+                    navController.navigate("edit_plantilla/$idEnt/$idPlan")
+                },
                 onNavigateToAddAtleta = { /* ... */ },
-                onNavigateToAddExercise = { /* ... */ },
-                onNavigateToAddPlantilla = { /* ... */ },
-                onNavigateToEditExercise = { _, _ -> },
-                onNavigateToEditPlantilla = { _, _ -> },
                 onNavigateToEditarDatosPersonales = { _ -> },
                 onNavigateToHistorialFacturacion = { _, _ -> },
                 onNavigateToInformeGlobalFacturacion = { _ -> },
@@ -214,6 +225,45 @@ fun AppNavigation() {
         ) { backStackEntry ->
             val atletaId = backStackEntry.arguments?.getString("atletaId") ?: ""
             ProgresoAtletaScreen(userId = atletaId, onBack = { navController.popBackStack() })
+        }
+
+        // ============================================================
+        // 📚 MÓDULO DE LA BIBLIOTECA (EJERCICIOS Y PLANTILLAS CO-CENTRAL)
+        // ============================================================
+        composable(
+            route = "biblioteca/{entrenadorId}",
+            arguments = listOf(navArgument("entrenadorId") { type = NavType.StringType })
+        ) { backStackEntry ->
+            val id = backStackEntry.arguments?.getString("entrenadorId") ?: ""
+            BibliotecaScreen(
+                entrenadorId = id,
+                onNavigateToAddEjercicio = { entId -> navController.navigate("add_ejercicio/$entId") },
+                onNavigateToEditEjercicio = { entId, ejId -> navController.navigate("edit_ejercicio/$entId/$ejId") },
+                onNavigateToAddPlantilla = { entId -> navController.navigate("add_plantilla/$entId") },
+                onNavigateToEditPlantilla = { entId, planId -> navController.navigate("edit_plantilla/$entId/$planId") }
+            )
+        }
+
+        composable("add_ejercicio/{entrenadorId}") { backStackEntry ->
+            val id = backStackEntry.arguments?.getString("entrenadorId") ?: ""
+            AddEjercicioScreen(entrenadorId = id, onBack = { navController.popBackStack() })
+        }
+
+        composable("edit_ejercicio/{entrenadorId}/{ejercicioId}") { backStackEntry ->
+            val entId = backStackEntry.arguments?.getString("entrenadorId") ?: ""
+            val ejId = backStackEntry.arguments?.getString("ejercicioId") ?: ""
+            AddEjercicioScreen(entrenadorId = entId, ejercicioId = ejId, onBack = { navController.popBackStack() })
+        }
+
+        composable("add_plantilla/{entrenadorId}") { backStackEntry ->
+            val id = backStackEntry.arguments?.getString("entrenadorId") ?: ""
+            AddPlantillaScreen(entrenadorId = id, onBack = { navController.popBackStack() })
+        }
+
+        composable("edit_plantilla/{entrenadorId}/{plantillaId}") { backStackEntry ->
+            val entId = backStackEntry.arguments?.getString("entrenadorId") ?: ""
+            val planId = backStackEntry.arguments?.getString("plantillaId") ?: ""
+            AddPlantillaScreen(entrenadorId = entId, plantillaId = planId, onBack = { navController.popBackStack() })
         }
 
         // ============================================================

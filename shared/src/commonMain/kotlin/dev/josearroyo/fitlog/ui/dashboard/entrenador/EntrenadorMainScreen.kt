@@ -29,6 +29,7 @@ import dev.josearroyo.fitlog.ui.navigation.BottomNavItem
 import dev.josearroyo.fitlog.viewmodel.entrenador.PerfilEntrenadorViewModel
 import kotlinx.coroutines.launch
 import androidx.compose.ui.text.style.TextAlign
+import dev.josearroyo.fitlog.ui.dashboard.entrenador.BibliotecaScreen
 
 private val FondoOscuro = Color(0xFF241B3C)
 private val NaranjaAcento = Color(0xFFFF9F6D)
@@ -84,7 +85,7 @@ fun EntrenadorMainScreen(
                 startDestination = BottomNavItem.Atletas.route,
                 modifier = Modifier.fillMaxSize()
             ) {
-                // 🚀 PESTAÑA 1 CONECTADA: Despliega el Dashboard Real con Firestore Multiplataforma
+                // 🚀 PESTAÑA 1: Dashboard Atletas
                 composable(BottomNavItem.Atletas.route) {
                     EntrenadorDashboardScreen(
                         entrenadorId = uid,
@@ -97,15 +98,18 @@ fun EntrenadorMainScreen(
                     )
                 }
 
+                // 🚀 PESTAÑA 2: Biblioteca de Rutinas (INTEGRADA)
                 composable(BottomNavItem.Biblioteca.route) {
-                    // Mantenemos el esqueleto seguro hasta que migremos tus plantillas y ejercicios
-                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        Text("Biblioteca de Rutinas\n(Próxima migración)", color = Color.White, textAlign = TextAlign.Center)
-                    }
+                    BibliotecaScreen(
+                        entrenadorId = uid,
+                        onNavigateToAddEjercicio = { entId -> onNavigateToAddExercise(entId) },
+                        onNavigateToEditEjercicio = { entId, ejId -> onNavigateToEditExercise(entId, ejId) },
+                        onNavigateToAddPlantilla = { entId -> onNavigateToAddPlantilla(entId) },
+                        onNavigateToEditPlantilla = { entId, planId -> onNavigateToEditPlantilla(entId, planId) }
+                    )
                 }
 
                 composable(BottomNavItem.Facturacion.route) {
-                    // Historial contable global (Esqueleto seguro)
                     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                         Text("Módulo de Facturación\n(Próxima migración)", color = Color.White, textAlign = TextAlign.Center)
                     }
@@ -121,7 +125,7 @@ fun EntrenadorMainScreen(
             }
         }
 
-        // 3. Base Rígida Inferior con padding seguro para la barra de gestos de Android/iOS
+        // 3. Base Rígida Inferior
         Box(
             modifier = Modifier
                 .fillMaxWidth()
