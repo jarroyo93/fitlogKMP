@@ -12,5 +12,8 @@ data class Habitos(
     val diasDisponibles: String = "",
     val horarioEntrenamiento: String = "",
     val tiempoDisponibleMinutos: Int = 0,
-    val fechaRegistro: Long = 0L // Cambiado Date -> Long
+
+    // 🚀 REGLA DE MIGRACIÓN: Aplicamos el serializador para compatibilidad con Timestamps existentes
+    @Serializable(with = TimestampLongSerializer::class)
+    val fechaRegistro: Long = 0L
 )

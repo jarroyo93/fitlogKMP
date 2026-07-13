@@ -60,6 +60,8 @@ class AtletaProgresoRepository {
 
             snapshot.documents.map { doc -> doc.data<SesionEntrenamiento>().copy(id = doc.id) }
         } catch (e: Exception) {
+            // 🚀 Agregamos la traza para depurar cualquier discrepancia remanente en el parseo
+            e.printStackTrace()
             emptyList()
         }
     }

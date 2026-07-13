@@ -95,7 +95,11 @@ class AtletaRepository {
         snapshot.documents.map { doc ->
             doc.data<Habitos>().copy(id = doc.id)
         }
-    } catch (e: Exception) { emptyList() }
+    } catch (e: Exception) {
+        // 🚀 AGREGADO: Crucial para ver fallos de conexión, reglas de seguridad o mapeos en KMP
+        e.printStackTrace()
+        emptyList()
+    }
 
     suspend fun guardarHabitos(atletaId: String, habitos: Habitos): Boolean = try {
         // 🔥 Corrección: Uso de marca de tiempo pura Long
@@ -117,6 +121,8 @@ class AtletaRepository {
             doc.data<RutinaAsignada>().copy(id = doc.id)
         }
     } catch (e: Exception) {
+        // 🚀 AGREGADO: Crucial para ver en consola si Firestore rechaza la consulta por falta de índices o discrepancias
+        e.printStackTrace()
         emptyList()
     }
 

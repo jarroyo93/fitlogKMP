@@ -4,16 +4,21 @@ import kotlinx.serialization.Serializable
 
 @Serializable
 data class SesionEntrenamiento(
-    var id: String = "", // Removido @DocumentId
+    var id: String = "",
     val rutinaAsignadaId: String = "",
     val diaEntrenamientoId: String = "",
     val nombreRutina: String = "",
-    val fechaEjecucion: Long = 0L, // Cambiado Date -> Long
+
+    // 🚀 SOLUCIÓN AL ERROR DE LOGCAT: Mapea el objeto Timestamp de la base de datos de producción a Long
+    @Serializable(with = TimestampLongSerializer::class)
+    val fechaEjecucion: Long = 0L,
+
     val ejerciciosRealizados: List<EjercicioRealizado> = emptyList(),
     val totalRepsEfectivasMeta: Int = 0,
     val totalRepsEfectivasLogradas: Int = 0,
     val porcentajeVolumenSesion: Double = 0.0
 )
+
 @Serializable
 data class EjercicioRealizado(
     val ejercicioGlobalId: String = "",
@@ -24,6 +29,7 @@ data class EjercicioRealizado(
     val fueSaltado: Boolean = false,
     val justificacionSalto: String = ""
 )
+
 @Serializable
 data class SerieRealizada(
     val numeroSerie: Int = 1,
@@ -35,8 +41,7 @@ data class SerieRealizada(
     val repsTarget: Int = 0
 )
 
-// Tu función de extensión de métricas se mantiene intacta y funcional en KMP
-
+// 🔥 Tu función de extensión de métricas intacta y funcional en KMP
 fun SesionEntrenamiento.calcularMetricas(): SesionEntrenamiento {
     var metaTotal = 0
     var logradasTotal = 0
