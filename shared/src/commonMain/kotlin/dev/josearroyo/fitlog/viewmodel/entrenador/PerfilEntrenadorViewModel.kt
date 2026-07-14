@@ -7,6 +7,7 @@ import dev.josearroyo.fitlog.repository.UserRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 // Modificado el nombre para alinearlo al contexto del Entrenador
@@ -72,29 +73,43 @@ class PerfilEntrenadorViewModel : ViewModel() {
         }
     }
 
-    fun guardarDatosPersonales(uid: String, nombres: String, apellidos: String, documento: String, telefono: String) {
+    // 🚀 CORREGIDO: Agregamos el parámetro 'tipoDocumento' a la firma del método
+    fun guardarDatosPersonales(
+        uid: String,
+        nombres: String,
+        apellidos: String,
+        tipoDocumento: String, // Recibe el tipo
+        documento: String,    // Recibe el número
+        telefono: String
+    ) {
         viewModelScope.launch {
-            _uiState.value = _uiState.value.copy(isSaving = true, exitoGuardado = false, error = null)
+            _uiState.update { it.copy(isSaving = true, exitoGuardado = false, error = null) }
+
             val exito = userRepository.actualizarDatosPersonales(
                 uid = uid,
                 nombres = nombres,
                 apellidos = apellidos,
+                tipoDocumento = tipoDocumento,
                 documento = documento,
                 telefono = telefono
             )
+
             if (exito) {
-                _uiState.value = _uiState.value.copy(
-                    isSaving = false,
-                    exitoGuardado = true,
-                    usuarioLogueado = _uiState.value.usuarioLogueado?.copy(
-                        nombres = nombres,
-                        apellidos = apellidos,
-                        numeroDocumento = documento,
-                        telefono = telefono
+                _uiState.update { state ->
+                    state.copy(
+                        isSaving = false,
+                        exitoGuardado = true,
+                        usuarioLogueado = state.usuarioLogueado?.copy(
+                            nombres = nombres,
+                            apellidos = apellidos,
+                            tipoDocumento = tipoDocumento,
+                            numeroDocumento = documento,
+                            telefono = telefono
+                        )
                     )
-                )
+                }
             } else {
-                _uiState.value = _uiState.value.copy(isSaving = false, error = "Error al actualizar los datos personales.")
+                _uiState.update { it.copy(isSaving = false, error = "Error al actualizar los datos.") }
             }
         }
     }

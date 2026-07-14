@@ -5,7 +5,7 @@ import androidx.lifecycle.viewModelScope
 import dev.gitlive.firebase.Firebase
 import dev.gitlive.firebase.auth.auth
 import dev.josearroyo.fitlog.data.model.Usuario
-import dev.josearroyo.fitlog.data.model.RutinaAsignada // 🚀 Importación del modelo vinculada
+import dev.josearroyo.fitlog.data.model.RutinaAsignada
 import dev.josearroyo.fitlog.repository.AtletaRepository
 import dev.josearroyo.fitlog.repository.UserRepository
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -17,7 +17,7 @@ import kotlinx.coroutines.launch
 data class PerfilAtletaState(
     val usuarioLogueado: Usuario? = null,
     val entrenadorAsignado: Usuario? = null,
-    val rutinaActiva: RutinaAsignada? = null, // 🚀 NUEVO: Almacena la rutina para la UI
+    val rutinaActiva: RutinaAsignada? = null,
     val isLoading: Boolean = false,
     val isSaving: Boolean = false,
     val error: String? = null,
@@ -38,21 +38,18 @@ class PerfilAtletaViewModel : ViewModel() {
             val atleta = atletaRepository.obtenerUsuario(atletaId)
 
             if (atleta != null) {
-                // 1. Cargamos datos del coach de forma segura
                 val coach = if (!atleta.entrenadorId.isNullOrBlank()) {
                     userRepository.obtenerUsuario(atleta.entrenadorId)
                 } else null
 
-                // 2. 🚀 EXTRACCIÓN DE PLANIFICACIÓN: Consultamos la subcolección de rutinas
                 val rutinas = atletaRepository.obtenerRutinasActivas(atletaId)
                 val rutinaActiva = rutinas.firstOrNull { it.estaActiva }
 
-                // 3. Sincronizamos todo el estado de golpe
                 _uiState.update { state ->
                     state.copy(
                         usuarioLogueado = atleta,
                         entrenadorAsignado = coach,
-                        rutinaActiva = rutinaActiva, // 🚀 Inyectado
+                        rutinaActiva = rutinaActiva,
                         isLoading = false
                     )
                 }
@@ -60,6 +57,69 @@ class PerfilAtletaViewModel : ViewModel() {
                 _uiState.update { it.copy(isLoading = false, error = "No se pudo cargar el perfil.") }
             }
         }
+    }
+
+    // 🚀 NUEVA FUNCIÓN: Permite actualizar todos los datos desde la pantalla unificada
+    fun actualizarDatosAtleta(
+        uid: String,
+        nombres: String,
+        apellidos: String,
+        tipoDocumento: String,
+        numeroDocumento: String,
+        telefono: String,
+        fechaNacimiento: Long?,
+        tipoSangre: String?,
+        nacionalidad: String?
+    ) {
+        viewModelScope.launch {
+            _uiState.update { it.copy(isSaving = true, error = null) }
+            try {
+                val campos = mutableMapOf<String, Any>(
+                    "nombres" to nombres.trim(),
+                    "apellidos" to apellidos.trim(),
+                    "tipoDocumento" to tipoDocumento.trim(),
+                    "numeroDocumento" to numeroDocumento.trim(),
+                    "telefono" to telefono.trim()
+                )
+
+                fechaNacimiento?.let { campos["fechaNacimiento"] = it }
+                tipoSangre?.let { campos["tipoSangre"] = it.trim() }
+                nacionalidad?.let { campos["nacionalidad"] = it.trim() }
+
+                val exitoFirestore = userRepository.actualizarPerfilUsuario(uid, campos)
+                if (!exitoFirestore) {
+                    throw Exception("No se pudieron guardar los cambios en el servidor.")
+                }
+
+                _uiState.update { state ->
+                    state.copy(
+                        isSaving = false,
+                        error = null,
+                        guardadoExitoso = true,
+                        usuarioLogueado = state.usuarioLogueado?.copy(
+                            nombres = nombres.trim(),
+                            apellidos = apellidos.trim(),
+                            tipoDocumento = tipoDocumento.trim(),
+                            numeroDocumento = numeroDocumento.trim(),
+                            telefono = telefono.trim(),
+                            // 🚀 CORREGIDO: Si es nulo, mantiene el que ya tenía en el estado, si no, usa 0L
+                            fechaNacimiento = fechaNacimiento ?: state.usuarioLogueado?.fechaNacimiento ?: 0L,
+                            tipoSangre = tipoSangre ?: state.usuarioLogueado?.tipoSangre ?: "",
+                            nacionalidad = nacionalidad ?: state.usuarioLogueado?.nacionalidad ?: ""
+                        )
+                    )
+                }
+            } catch (e: Exception) {
+                _uiState.update {
+                    it.copy(isSaving = false, error = e.message ?: "Ocurrió un error inesperado.")
+                }
+            }
+        }
+    }
+
+    // 🚀 NUEVA FUNCIÓN: Restablece el flag de guardado para evitar pops infinitos en la UI
+    fun resetExito() {
+        _uiState.update { it.copy(guardadoExitoso = false) }
     }
 
     fun guardarPerfilAtleta(uid: String, nombres: String, apellidos: String, nuevoCorreo: String, nacionalidad: String) {

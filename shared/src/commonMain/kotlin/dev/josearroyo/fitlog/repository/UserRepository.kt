@@ -188,24 +188,27 @@ class UserRepository {
         }
     }
 
+    // UserRepository.kt (Corrección KMP)
     suspend fun actualizarDatosPersonales(
         uid: String,
         nombres: String,
         apellidos: String,
+        tipoDocumento: String,
         documento: String,
         telefono: String
-    ): Boolean {
-        return try {
-            usersCollection.document(uid).update(
-                "nombres" to nombres,
-                "apellidos" to apellidos,
-                "numeroDocumento" to documento,
-                "telefono" to telefono
-            )
-            true
-        } catch (e: Exception) {
-            false
-        }
+    ): Boolean = try {
+        val campos = mapOf(
+            "nombres" to nombres,
+            "apellidos" to apellidos,
+            "tipoDocumento" to tipoDocumento,
+            "numeroDocumento" to documento,
+            "telefono" to telefono
+        )
+        // Ya es una función suspend, no requiere .await()
+        db.collection("users").document(uid).update(campos)
+        true
+    } catch (e: Exception) {
+        false
     }
 
     // ============================================================

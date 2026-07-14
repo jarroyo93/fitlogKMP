@@ -3,12 +3,17 @@ package dev.josearroyo.fitlog.ui.navigation
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextAlign
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -30,6 +35,7 @@ import dev.josearroyo.fitlog.ui.dashboard.EditRutinaAsignadaScreen
 import dev.josearroyo.fitlog.ui.dashboard.entrenador.AddEjercicioScreen
 import dev.josearroyo.fitlog.ui.dashboard.entrenador.AddPlantillaScreen
 import dev.josearroyo.fitlog.ui.dashboard.entrenador.BibliotecaScreen
+import dev.josearroyo.fitlog.ui.profile.EditarDatosPersonalesScreen
 
 @Composable
 fun AppNavigation() {
@@ -93,7 +99,7 @@ fun AppNavigation() {
             EntrenadorMainScreen(
                 uid = uid,
                 onNavigateToAtletaDetail = { atletaId ->
-                    navController.navigate("atleta_detail/$ atletaId")
+                    navController.navigate("atleta_detail/$atletaId")
                 },
                 onNavigateToAddExercise = { id ->
                     navController.navigate("add_ejercicio/$id")
@@ -108,10 +114,9 @@ fun AppNavigation() {
                     navController.navigate("edit_plantilla/$idEnt/$idPlan")
                 },
                 onNavigateToAddAtleta = { /* ... */ },
-                onNavigateToEditarDatosPersonales = { _ -> },
-
-                // 🚀 CORREGIDO: Como aún no implementas el Historial individual,
-                // dejamos el callback listo con un log impreso en consola. Así evitamos el bucle de UI.
+                onNavigateToEditarDatosPersonales = { entrenadorId ->
+                    navController.navigate("editar_datos_personales/$entrenadorId")
+                },
                 onNavigateToHistorialFacturacion = { atletaId, _ ->
                     println("Navegación incremental KMP: Abrir historial de cobros del atleta $atletaId")
                 },
@@ -271,8 +276,83 @@ fun AppNavigation() {
             AddPlantillaScreen(entrenadorId = entId, plantillaId = planId, onBack = { navController.popBackStack() })
         }
 
-        // 🚀 SE ELIMINÓ EL BLOQUE COMPOSABLE "facturacion_general" DE AQUÍ
-        // ya que la pantalla ahora vive de forma nativa dentro de los Tabs.
+        // ============================================================
+        // 👥 RUTA COMPARTIDA / CAMALEÓNICA DE DATOS PERSONALES
+        // ============================================================
+        composable(
+            route = "editar_datos_personales/{uid}",
+            arguments = listOf(navArgument("uid") { type = NavType.StringType })
+        ) { backStackEntry ->
+            val uid = backStackEntry.arguments?.getString("uid") ?: ""
+
+            val entrenadorVM: dev.josearroyo.fitlog.viewmodel.entrenador.PerfilEntrenadorViewModel = viewModel()
+            val atletaVM: dev.josearroyo.fitlog.viewmodel.atleta.PerfilAtletaViewModel = viewModel()
+
+            val stateEntrenador by entrenadorVM.uiState.collectAsState()
+            val stateAtleta by atletaVM.uiState.collectAsState()
+
+            LaunchedEffect(uid) {
+                entrenadorVM.cargarPerfil(uid)
+                atletaVM.cargarPerfil(uid)
+            }
+
+            LaunchedEffect(stateEntrenador.exitoGuardado, stateAtleta.guardadoExitoso) {
+                if (stateEntrenador.exitoGuardado) {
+                    entrenadorVM.resetExito()
+                    navController.popBackStack()
+                } else if (stateAtleta.guardadoExitoso) {
+                    atletaVM.resetExito()
+                    navController.popBackStack()
+                }
+            }
+
+            when {
+                // ... dentro del 'when' en AppNavigation.kt
+                stateEntrenador.usuarioLogueado != null -> {
+                    val usuario = stateEntrenador.usuarioLogueado!!
+                    EditarDatosPersonalesScreen(
+                        usuarioActual = usuario,
+                        isSaving = stateEntrenador.isSaving,
+                        error = stateEntrenador.error,
+                        onBack = { navController.popBackStack() },
+                        // Mapeamos los 8 parámetros de la pantalla:
+                        onGuardarCambios = { nom, ape, tDoc, nDoc, tel, _, _, _ ->
+                            // Ahora pasamos correctamente cada valor al ViewModel del Entrenador
+                            entrenadorVM.guardarDatosPersonales(
+                                uid = uid,
+                                nombres = nom,
+                                apellidos = ape,
+                                tipoDocumento = tDoc,
+                                documento = nDoc,
+                                telefono = tel
+                            )
+                        }
+                    )
+                }
+                stateAtleta.usuarioLogueado != null -> {
+                    val atleta = stateAtleta.usuarioLogueado!!
+                    EditarDatosPersonalesScreen(
+                        usuarioActual = atleta,
+                        isSaving = stateAtleta.isSaving,
+                        error = stateAtleta.error,
+                        onBack = { navController.popBackStack() },
+                        onGuardarCambios = { nom, ape, tDoc, nDoc, tel, fNac, tSangre, nac ->
+                            atletaVM.actualizarDatosAtleta(uid, nom, ape, tDoc, nDoc, tel, fNac, tSangre, nac)
+                        }
+                    )
+                }
+                else -> {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .background(Color(0xFF241B3C)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        CircularProgressIndicator(color = Color(0xFFFF9F6D))
+                    }
+                }
+            }
+        }
 
         // ============================================================
         // 🏋️ PANEL INTERNO DEL ATLETA (FALLBACK)
