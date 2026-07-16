@@ -150,6 +150,10 @@ class AtletaRepository {
         true
     } catch (e: Exception) { false }
 
+    fun obtenerIdEntrenadorActual(): String? {
+        return auth.currentUser?.uid
+    }
+
     // ============================================================
     // BLOQUE 5: CREACIÓN INICIAL DE RAÍZ (CON ENLACE CONTABLE GENERAL)
     // ============================================================

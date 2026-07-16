@@ -20,6 +20,9 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import dev.josearroyo.fitlog.data.model.RolUsuario
+import dev.josearroyo.fitlog.repository.AtletaRepository
+import dev.josearroyo.fitlog.repository.AuthRepository
+import dev.josearroyo.fitlog.repository.UserRepository
 import dev.josearroyo.fitlog.ui.login.LoginScreen
 import dev.josearroyo.fitlog.ui.login.CambiarContrasenaScreen
 import dev.josearroyo.fitlog.ui.splash.SplashScreen
@@ -36,6 +39,8 @@ import dev.josearroyo.fitlog.ui.dashboard.entrenador.AddEjercicioScreen
 import dev.josearroyo.fitlog.ui.dashboard.entrenador.AddPlantillaScreen
 import dev.josearroyo.fitlog.ui.dashboard.entrenador.BibliotecaScreen
 import dev.josearroyo.fitlog.ui.profile.EditarDatosPersonalesScreen
+import dev.josearroyo.fitlog.ui.dashboard.entrenador.AddAtletaScreen
+import dev.josearroyo.fitlog.viewmodel.entrenador.AddAtletaViewModel
 
 @Composable
 fun AppNavigation() {
@@ -113,7 +118,9 @@ fun AppNavigation() {
                 onNavigateToEditPlantilla = { idEnt, idPlan ->
                     navController.navigate("edit_plantilla/$idEnt/$idPlan")
                 },
-                onNavigateToAddAtleta = { /* ... */ },
+                onNavigateToAddAtleta = {
+                    navController.navigate("agregar_atleta") // 🚀 AHORA NAVEGA A TU FORMULARIO KMP
+                },
                 onNavigateToEditarDatosPersonales = { entrenadorId ->
                     navController.navigate("editar_datos_personales/$entrenadorId")
                 },
@@ -126,6 +133,25 @@ fun AppNavigation() {
                         popUpTo(0) { inclusive = true }
                     }
                 }
+            )
+        }
+
+        // ============================================================
+        // ➕ NUEVA RUTA: AGREGAR ATLETA (PÁGINA COMPLETA DE CREACIÓN MANUAL)
+        // ============================================================
+        composable(route = "agregar_atleta") {
+            // 🟢 CÓDIGO CORREGIDO: Le pasamos los repositorios creados manualmente
+            val addAtletaVM: AddAtletaViewModel = viewModel {
+                AddAtletaViewModel(
+                    atletaRepository = AtletaRepository(),
+                    userRepository = UserRepository(),
+                    authRepository = AuthRepository()
+                )
+            }
+
+            AddAtletaScreen(
+                viewModel = addAtletaVM,
+                onNavigateBack = { navController.popBackStack() }
             )
         }
 
@@ -307,7 +333,6 @@ fun AppNavigation() {
             }
 
             when {
-                // ... dentro del 'when' en AppNavigation.kt
                 stateEntrenador.usuarioLogueado != null -> {
                     val usuario = stateEntrenador.usuarioLogueado!!
                     EditarDatosPersonalesScreen(
@@ -315,9 +340,7 @@ fun AppNavigation() {
                         isSaving = stateEntrenador.isSaving,
                         error = stateEntrenador.error,
                         onBack = { navController.popBackStack() },
-                        // Mapeamos los 8 parámetros de la pantalla:
                         onGuardarCambios = { nom, ape, tDoc, nDoc, tel, _, _, _ ->
-                            // Ahora pasamos correctamente cada valor al ViewModel del Entrenador
                             entrenadorVM.guardarDatosPersonales(
                                 uid = uid,
                                 nombres = nom,

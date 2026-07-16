@@ -53,6 +53,9 @@ fun EntrenadorDashboardScreen(
 
     val clipboardManager = LocalClipboardManager.current
 
+    // Estado reactivo para controlar el diálogo de opciones de vinculación/creación
+    var mostrarDialogOpciones by remember { mutableStateOf(false) }
+
     LaunchedEffect(entrenadorId) {
         dashboardViewModel.cargarDashboard(entrenadorId)
     }
@@ -140,11 +143,13 @@ fun EntrenadorDashboardScreen(
         // 4. Botón Flotante para Generar Código (FAB)
         FloatingActionButton(
             onClick = {
-                if (codigoGenerado == null) {
-                    dashboardViewModel.generarCodigoVinculacion(entrenadorId)
-                } else {
+                if (codigoGenerado != null) {
+                    // Si ya se generó un código, el botón sirve para copiar y limpiar
                     clipboardManager.setText(AnnotatedString(codigoGenerado!!))
                     dashboardViewModel.limpiarCodigo()
+                } else {
+                    // Si no, abrimos el diálogo selector de opción de registro
+                    mostrarDialogOpciones = true
                 }
             },
             containerColor = NaranjaAcento,
@@ -160,8 +165,71 @@ fun EntrenadorDashboardScreen(
                     Text("Copiar: $codigoGenerado", fontWeight = FontWeight.Bold, fontSize = 14.sp)
                 }
             } else {
-                Icon(Icons.Default.Add, contentDescription = "Generar Código")
+                Icon(Icons.Default.Add, contentDescription = "Agregar Atleta")
             }
+        }
+
+        // 5. Renderizado del Diálogo de Opciones
+        if (mostrarDialogOpciones) {
+            AlertDialog(
+                onDismissRequest = { mostrarDialogOpciones = false },
+                containerColor = FondoTarjeta,
+                title = {
+                    Text(
+                        text = "Registrar Atleta",
+                        color = Color.White,
+                        fontSize = 20.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                },
+                text = {
+                    Text(
+                        text = "Selecciona cómo quieres registrar o vincular a tu nuevo atleta.",
+                        color = TextoSecundario,
+                        fontSize = 14.sp
+                    )
+                },
+                confirmButton = {
+                    Column(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        // Opción Manual
+                        Button(
+                            onClick = {
+                                mostrarDialogOpciones = false
+                                onAddAtletaClick() // Dispara la navegación del AppNavigation
+                            },
+                            modifier = Modifier.fillMaxWidth(),
+                            colors = ButtonDefaults.buttonColors(containerColor = NaranjaAcento)
+                        ) {
+                            Text("Crear Manualmente", color = Color.White, fontWeight = FontWeight.Bold)
+                        }
+
+                        // Opción por Código (Generación original)
+                        OutlinedButton(
+                            onClick = {
+                                mostrarDialogOpciones = false
+                                dashboardViewModel.generarCodigoVinculacion(entrenadorId)
+                            },
+                            modifier = Modifier.fillMaxWidth(),
+                            colors = ButtonDefaults.outlinedButtonColors(contentColor = NaranjaAcento),
+                            border = androidx.compose.foundation.BorderStroke(1.dp, NaranjaAcento)
+                        ) {
+                            Text("Generar Código de Vinculación", fontWeight = FontWeight.Bold)
+                        }
+
+                        Spacer(modifier = Modifier.height(4.dp))
+
+                        TextButton(
+                            onClick = { mostrarDialogOpciones = false },
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Text("Cancelar", color = TextoSecundario)
+                        }
+                    }
+                }
+            )
         }
     }
 }
