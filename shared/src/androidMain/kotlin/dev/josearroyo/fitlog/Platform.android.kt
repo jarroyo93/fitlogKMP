@@ -73,3 +73,43 @@ actual fun formatearFechaHistorial(timestamp: Long): String {
     val sdf = SimpleDateFormat("dd 'de' MMMM, yyyy", Locale("es", "ES"))
     return sdf.format(date)
 }
+
+actual fun formatearFechaDiario(timestamp: Long): String {
+    val date = java.util.Date(timestamp)
+    val sdf = SimpleDateFormat("EEEE, dd MMMM yyyy - HH:mm", Locale("es", "ES"))
+    return sdf.format(date).replaceFirstChar { it.uppercase() }
+}
+
+actual fun formatearFechaMesCorto(timestamp: Long): String {
+    val date = java.util.Date(timestamp)
+    val sdf = SimpleDateFormat("dd MMM yyyy", Locale("es", "ES"))
+    return sdf.format(date)
+}
+
+actual fun obtenerLetraDiaSemana(timestamp: Long): String {
+    val date = java.util.Date(timestamp)
+    val sdf = SimpleDateFormat("E", Locale("es", "ES"))
+    return sdf.format(date).uppercase().take(1)
+}
+
+actual fun esMesActual(timestamp: Long): Boolean {
+    val calSesion = Calendar.getInstance().apply { timeInMillis = timestamp }
+    val calHoy = Calendar.getInstance()
+    return calSesion.get(Calendar.YEAR) == calHoy.get(Calendar.YEAR) &&
+            calSesion.get(Calendar.MONTH) == calHoy.get(Calendar.MONTH)
+}
+
+actual fun obtenerUltimos7DiasTimestamps(): List<Long> {
+    val list = mutableListOf<Long>()
+    for (i in 6 downTo 0) {
+        val cal = Calendar.getInstance().apply {
+            add(Calendar.DAY_OF_YEAR, -i)
+            set(Calendar.HOUR_OF_DAY, 12) // Mediodía para evitar problemas de huso horario
+            set(Calendar.MINUTE, 0)
+            set(Calendar.SECOND, 0)
+            set(Calendar.MILLISECOND, 0)
+        }
+        list.add(cal.timeInMillis)
+    }
+    return list
+}

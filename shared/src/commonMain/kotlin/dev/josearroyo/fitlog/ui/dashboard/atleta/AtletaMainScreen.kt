@@ -44,6 +44,7 @@ import dev.josearroyo.fitlog.viewmodel.atleta.PerfilAtletaViewModel
 // 🟢 IMPORTACIONES DE LAS NUEVAS FUNCIONES PLATAFORMA KMP
 import dev.josearroyo.fitlog.getCurrentTimeMillis
 import dev.josearroyo.fitlog.formatearFechaHistorial
+import dev.josearroyo.fitlog.ui.dashboard.ProgresoAtletaScreen
 
 private val FondoOscuro = Color(0xFF241B3C)
 private val NaranjaAcento = Color(0xFFFF9F6D)
@@ -161,13 +162,23 @@ fun AtletaMainScreen(
                         ) {
                             // 🟢 STUBS / PLACEHOLDERS: Mantiene compilable el contenedor mientras migramos las pantallas hijas una a una
                             composable(BottomNavItem.AtletaInicio.route) {
-                                AtletaPlaceholderScreen("Pestaña Inicio\n(Próxima Migración)")
+                                AtletaInicioScreen(
+                                    uid = uid,
+                                    onNavigateToEntrenar = { rutinaId ->
+                                        bottomNavController.navigate("entrenar/$rutinaId")
+                                    }
+                                )
                             }
                             composable(BottomNavItem.AtletaRutinas.route) {
-                                AtletaPlaceholderScreen("Pestaña Rutinas\n(Próxima Migración)")
+                                AtletaRutinasScreen(
+                                    uid = uid,
+                                    onNavigateToEntrenar = { rutinaId ->
+                                        bottomNavController.navigate("entrenar/$rutinaId")
+                                    }
+                                )
                             }
                             composable(BottomNavItem.AtletaProgreso.route) {
-                                AtletaPlaceholderScreen("Pestaña Progreso\n(Próxima Migración)")
+                                ProgresoAtletaScreen(userId = uid)
                             }
                             composable(BottomNavItem.AtletaPerfil.route) {
                                 PerfilAtletaTab(
@@ -179,7 +190,12 @@ fun AtletaMainScreen(
                             }
                             composable("entrenar/{rutinaId}") { backStackEntry ->
                                 val rutinaId = backStackEntry.arguments?.getString("rutinaId") ?: ""
-                                AtletaPlaceholderScreen("Entrenamiento activo: $rutinaId\n(Próxima Migración)")
+                                EntrenarScreen(
+                                    atletaId = uid,
+                                    rutinaId = rutinaId,
+                                    onBack = { bottomNavController.popBackStack() },
+                                    onFinish = { bottomNavController.popBackStack() }
+                                )
                             }
                         }
                     }

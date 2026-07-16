@@ -107,3 +107,56 @@ actual fun formatearFechaHistorial(timestamp: Long): String {
     }
     return formatter.stringFromDate(date)
 }
+
+actual fun formatearFechaDiario(timestamp: Long): String {
+    val date = NSDate.dateWithTimeIntervalSince1970(timestamp / 1000.0)
+    val formatter = NSDateFormatter().apply {
+        dateFormat = "EEEE, dd MMMM yyyy - HH:mm"
+        locale = NSLocale(localeIdentifier = "es_ES")
+    }
+    return formatter.stringFromDate(date).replaceFirstChar { it.uppercase() }
+}
+
+actual fun formatearFechaMesCorto(timestamp: Long): String {
+    val date = NSDate.dateWithTimeIntervalSince1970(timestamp / 1000.0)
+    val formatter = NSDateFormatter().apply {
+        dateFormat = "dd MMM yyyy"
+        locale = NSLocale(localeIdentifier = "es_ES")
+    }
+    return formatter.stringFromDate(date)
+}
+
+actual fun obtenerLetraDiaSemana(timestamp: Long): String {
+    val date = NSDate.dateWithTimeIntervalSince1970(timestamp / 1000.0)
+    val formatter = NSDateFormatter().apply {
+        dateFormat = "E"
+        locale = NSLocale(localeIdentifier = "es_ES")
+    }
+    return formatter.stringFromDate(date).uppercase().take(1)
+}
+
+actual fun esMesActual(timestamp: Long): Boolean {
+    val calendar = NSCalendar.currentCalendar
+    val dateSesion = NSDate.dateWithTimeIntervalSince1970(timestamp / 1000.0)
+    val dateHoy = NSDate()
+
+    val compSesion = calendar.components(NSCalendarUnitYear or NSCalendarUnitMonth, fromDate = dateSesion)
+    val compHoy = calendar.components(NSCalendarUnitYear or NSCalendarUnitMonth, fromDate = dateHoy)
+
+    return compSesion.year == compHoy.year && compSesion.month == compHoy.month
+}
+
+actual fun obtenerUltimos7DiasTimestamps(): List<Long> {
+    val calendar = NSCalendar.currentCalendar
+    val list = mutableListOf<Long>()
+    for (i in 6 downTo 0) {
+        val date = calendar.dateByAddingUnit(
+            NSCalendarUnitDay,
+            value = -i.toLong(),
+            toDate = NSDate(),
+            options = 0UL
+        ) ?: NSDate()
+        list.add((date.timeIntervalSince1970 * 1000).toLong())
+    }
+    return list
+}
