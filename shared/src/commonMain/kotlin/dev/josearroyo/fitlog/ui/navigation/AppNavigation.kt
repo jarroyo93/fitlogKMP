@@ -35,6 +35,7 @@ import dev.josearroyo.fitlog.ui.atleta.AddHabitosScreen
 import dev.josearroyo.fitlog.ui.dashboard.PerfilAtletaScreen
 import dev.josearroyo.fitlog.ui.dashboard.ProgresoAtletaScreen
 import dev.josearroyo.fitlog.ui.dashboard.EditRutinaAsignadaScreen
+import dev.josearroyo.fitlog.ui.dashboard.atleta.AtletaMainScreen
 import dev.josearroyo.fitlog.ui.dashboard.entrenador.AddEjercicioScreen
 import dev.josearroyo.fitlog.ui.dashboard.entrenador.AddPlantillaScreen
 import dev.josearroyo.fitlog.ui.dashboard.entrenador.BibliotecaScreen
@@ -378,24 +379,28 @@ fun AppNavigation() {
         }
 
         // ============================================================
-        // 🏋️ PANEL INTERNO DEL ATLETA (FALLBACK)
+        // 🏋️ PANEL INTERNO DEL ATLETA (INTEGRADO Y OPERATIVO)
         // ============================================================
         composable(
             route = "dashboard_atleta/{uid}",
             arguments = listOf(navArgument("uid") { type = NavType.StringType })
-        ) {
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .background(Color(0xFF241B3C)),
-                contentAlignment = Alignment.Center
-            ) {
-                Text(
-                    text = "Panel del Atleta\n(Próxima migración modular)",
-                    color = Color.White,
-                    textAlign = TextAlign.Center
-                )
-            }
+        ) { backStackEntry ->
+            val uid = backStackEntry.arguments?.getString("uid") ?: ""
+
+            AtletaMainScreen(
+                uid = uid,
+                onLogout = {
+                    navController.navigate("login") {
+                        popUpTo("login") { inclusive = true }
+                    }
+                },
+                onNavigateToCambiarContrasena = { userId ->
+                    navController.navigate("cambiar_password/$userId")
+                },
+                onNavigateToEditarDatosPersonales = { userId ->
+                    navController.navigate("editar_datos_personales/$userId")
+                }
+            )
         }
     }
 }

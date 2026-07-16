@@ -54,6 +54,7 @@ kotlin {
             implementation(libs.firebase.firestore)
             implementation(compose.materialIconsExtended)
             implementation(libs.androidx.navigation.compose)
+            implementation(libs.kotlinx.serialization.json)
         }
         commonTest.dependencies {
             implementation(libs.kotlin.test)
