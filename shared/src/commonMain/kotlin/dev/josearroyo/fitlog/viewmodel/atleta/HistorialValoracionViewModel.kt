@@ -22,8 +22,12 @@ class HistorialValoracionViewModel : ViewModel() {
     fun cargarHistorial(atletaId: String) {
         viewModelScope.launch {
             _state.update { it.copy(isLoading = true) }
-            val lista = repository.obtenerHistorialValoraciones(atletaId)
-            _state.update { it.copy(lista = lista, isLoading = false) }
+            try {
+                val lista = repository.obtenerHistorialValoraciones(atletaId)
+                _state.update { it.copy(lista = lista, isLoading = false) }
+            } catch (e: Exception) {
+                _state.update { it.copy(isLoading = false) }
+            }
         }
     }
 }

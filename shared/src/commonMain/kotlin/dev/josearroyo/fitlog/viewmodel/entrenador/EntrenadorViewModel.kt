@@ -10,9 +10,13 @@ import dev.josearroyo.fitlog.getCurrentTimeMillis
 import dev.josearroyo.fitlog.esMismoDia
 import dev.josearroyo.fitlog.formatearHora
 import dev.josearroyo.fitlog.formatearFechaHora
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.supervisorScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 data class AsistenciaAtletaUI(
@@ -21,145 +25,133 @@ data class AsistenciaAtletaUI(
     val horaEntrenamiento: String? = null
 )
 
+// 🟢 Estado unificado para consistencia arquitectónica y protección de memoria en iOS
+data class EntrenadorUiState(
+    val atletas: List<Usuario> = emptyList(),
+    val asistenciaDia: List<AsistenciaAtletaUI> = emptyList(),
+    val isLoading: Boolean = true,
+    val isLoadingAsistencia: Boolean = false,
+    val isGeneratingCode: Boolean = false,
+    val codigoGenerado: String? = null,
+    val expiracionCodigoTexto: String? = null,
+    val textoBusqueda: String = "",
+    val tabSeleccionado: Int = 0,
+    val error: String? = null
+)
+
 class EntrenadorViewModel : ViewModel() {
     private val userRepository = UserRepository()
     private val progresoRepository = AtletaProgresoRepository()
 
-    // Cache interno para aplicar búsquedas en memoria sin volver a golpear a Firestore
     private var listaAtletasCompleta: List<Usuario> = emptyList()
     private var listaAsistenciaCompleta: List<AsistenciaAtletaUI> = emptyList()
 
-    // --- BLOQUE DE FLUJOS COMPATIBLES CON TU PANTALLA ---
-    private val _atletas = MutableStateFlow<List<Usuario>>(emptyList())
-    val atletas: StateFlow<List<Usuario>> = _atletas.asStateFlow()
-
-    private val _isLoading = MutableStateFlow(true)
-    val isLoading: StateFlow<Boolean> = _isLoading.asStateFlow()
-
-    private val _codigoGenerado = MutableStateFlow<String?>(null)
-    val codigoGenerado: StateFlow<String?> = _codigoGenerado.asStateFlow()
-
-    private val _expiracionCodigoTexto = MutableStateFlow<String?>(null)
-    val expiracionCodigoTexto: StateFlow<String?> = _expiracionCodigoTexto.asStateFlow()
-
-    private val _isGeneratingCode = MutableStateFlow(false)
-    val isGeneratingCode: StateFlow<Boolean> = _isGeneratingCode.asStateFlow()
-
-    private val _asistenciaDia = MutableStateFlow<List<AsistenciaAtletaUI>>(emptyList())
-    val asistenciaDia: StateFlow<List<AsistenciaAtletaUI>> = _asistenciaDia.asStateFlow()
-
-    private val _isLoadingAsistencia = MutableStateFlow(false)
-    val isLoadingAsistencia: StateFlow<Boolean> = _isLoadingAsistencia.asStateFlow()
-
-    private val _textoBusqueda = MutableStateFlow("")
-    val textoBusqueda: StateFlow<String> = _textoBusqueda.asStateFlow()
-
-    private val _tabSeleccionado = MutableStateFlow(0) // 0 = Atletas, 1 = Asistencia
-    val tabSeleccionado: StateFlow<Int> = _tabSeleccionado.asStateFlow()
-
+    private val _uiState = MutableStateFlow(EntrenadorUiState())
+    val uiState: StateFlow<EntrenadorUiState> = _uiState.asStateFlow()
 
     fun cargarDashboard(entrenadorId: String) {
         viewModelScope.launch {
-            _isLoading.value = true
+            _uiState.update { it.copy(isLoading = true, error = null) }
             try {
-                // 1. Consumo exacto de tu UserRepository para traer alumnos vinculados
                 listaAtletasCompleta = userRepository.obtenerAtletasPorEntrenador(entrenadorId)
-
-                // 2. Consumo exacto de tu UserRepository para validar si el coach ya tiene código activo
                 val perfilCoach = userRepository.obtenerUsuario(entrenadorId)
                 val ahora = getCurrentTimeMillis()
 
-                if (perfilCoach?.codigoVinculacion != null && (perfilCoach.expiracionCodigo ?: 0L) > ahora) {
-                    _codigoGenerado.value = perfilCoach.codigoVinculacion
-                    _expiracionCodigoTexto.value = formatearFechaHora(perfilCoach.expiracionCodigo!!)
-                } else {
-                    _codigoGenerado.value = null
-                    _expiracionCodigoTexto.value = null
+                val codigo = if (perfilCoach?.codigoVinculacion != null && (perfilCoach.expiracionCodigo ?: 0L) > ahora) {
+                    perfilCoach.codigoVinculacion
+                } else null
+
+                val expiracionTexto = perfilCoach?.expiracionCodigo?.let { formatearFechaHora(it) }
+
+                _uiState.update { state ->
+                    state.copy(
+                        codigoGenerado = codigo,
+                        expiracionCodigoTexto = expiracionTexto
+                    )
                 }
 
-                // Ejecutamos la ordenación del filtro inicial por si quedó algún remanente en la barra de búsqueda
-                aplicarBusqueda(_textoBusqueda.value)
-
-                // 3. Pasamos a procesar la asistencia del día actual
+                aplicarBusqueda(_uiState.value.textoBusqueda)
                 cargarAsistenciaDelDia()
 
             } catch (e: Exception) {
-                e.printStackTrace()
+                _uiState.update { it.copy(error = e.message ?: "Error al cargar el dashboard") }
             } finally {
-                _isLoading.value = false
+                _uiState.update { it.copy(isLoading = false) }
             }
         }
     }
 
     private fun cargarAsistenciaDelDia() {
         viewModelScope.launch {
-            _isLoadingAsistencia.value = true
+            _uiState.update { it.copy(isLoadingAsistencia = true) }
             try {
                 val hoy = getCurrentTimeMillis()
 
-                // Mapeamos de forma asíncrona comparando contra el AtletaProgresoRepository real
-                listaAsistenciaCompleta = listaAtletasCompleta.map { atleta ->
-                    val historial = progresoRepository.obtenerHistorialEntrenamientos(atleta.id)
 
-                    // Evaluamos usando la función expect/actual esMismoDia de tu Platform.kt
-                    val sesionDeHoy = historial.find { esMismoDia(it.fechaEjecucion, hoy) }
+                supervisorScope {
+                    listaAsistenciaCompleta = listaAtletasCompleta.map { atleta ->
+                        async {
+                            val historial = progresoRepository.obtenerHistorialEntrenamientos(atleta.id)
+                            val sesionDeHoy = historial.find { esMismoDia(it.fechaEjecucion, hoy) }
 
-                    AsistenciaAtletaUI(
-                        atleta = atleta,
-                        asistio = sesionDeHoy != null,
-                        horaEntrenamiento = sesionDeHoy?.let { formatearHora(it.fechaEjecucion) }
-                    )
+                            AsistenciaAtletaUI(
+                                atleta = atleta,
+                                asistio = sesionDeHoy != null,
+                                horaEntrenamiento = sesionDeHoy?.let { formatearHora(it.fechaEjecucion) }
+                            )
+                        }
+                    }.awaitAll() // Esperamos a que todas las peticiones terminen juntas
                 }
 
-                aplicarBusqueda(_textoBusqueda.value)
+                aplicarBusqueda(_uiState.value.textoBusqueda)
             } catch (e: Exception) {
-                e.printStackTrace()
+                _uiState.update { it.copy(error = "Error al procesar asistencia.") }
             } finally {
-                _isLoadingAsistencia.value = false
+                _uiState.update { it.copy(isLoadingAsistencia = false) }
             }
         }
     }
 
     fun aplicarBusqueda(query: String) {
-        _textoBusqueda.value = query
-
-        // Filtramos la pestaña de Atletas
-        _atletas.value = listaAtletasCompleta.filter {
+        val filteredAtletas = listaAtletasCompleta.filter {
             "${it.nombres} ${it.apellidos}".contains(query, ignoreCase = true)
         }
 
-        // Filtramos la pestaña de Asistencia
-        _asistenciaDia.value = listaAsistenciaCompleta.filter {
+        val filteredAsistencia = listaAsistenciaCompleta.filter {
             "${it.atleta.nombres} ${it.atleta.apellidos}".contains(query, ignoreCase = true)
         }
+
+        _uiState.update { it.copy(
+            textoBusqueda = query,
+            atletas = filteredAtletas,
+            asistenciaDia = filteredAsistencia
+        ) }
     }
 
     fun cambiarTab(index: Int) {
-        _tabSeleccionado.value = index
+        _uiState.update { it.copy(tabSeleccionado = index) }
     }
 
     fun generarCodigoVinculacion(entrenadorId: String) {
         viewModelScope.launch {
-            _isGeneratingCode.value = true
+            _uiState.update { it.copy(isGeneratingCode = true, error = null) }
             try {
-                // Invocamos tu método real de UserRepository que modifica la DB y genera los 6 dígitos
                 val codigo = userRepository.generarCodigoVinculacion(entrenadorId)
-                _codigoGenerado.value = codigo
-
-                // Tu repositorio le suma 900,000 milisegundos (15 minutos) a la expiración.
-                // Reflejamos ese cálculo aquí para pintar el texto en la UI de inmediato.
                 val tiempoExpiracion = getCurrentTimeMillis() + 900000
-                _expiracionCodigoTexto.value = formatearFechaHora(tiempoExpiracion)
+
+                _uiState.update { it.copy(
+                    codigoGenerado = codigo,
+                    expiracionCodigoTexto = formatearFechaHora(tiempoExpiracion)
+                ) }
             } catch (e: Exception) {
-                e.printStackTrace()
+                _uiState.update { it.copy(error = "No se pudo generar el código.") }
             } finally {
-                _isGeneratingCode.value = false
+                _uiState.update { it.copy(isGeneratingCode = false) }
             }
         }
     }
 
     fun limpiarCodigo() {
-        _codigoGenerado.value = null
-        _expiracionCodigoTexto.value = null
+        _uiState.update { it.copy(codigoGenerado = null, expiracionCodigoTexto = null) }
     }
 }

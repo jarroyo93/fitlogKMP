@@ -10,6 +10,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlin.uuid.Uuid
 
 data class EditRutinaState(
     val rutina: RutinaAsignada? = null,
@@ -28,11 +29,6 @@ class EditRutinaAsignadaViewModel : ViewModel() {
 
     private val _state = MutableStateFlow(EditRutinaState())
     val state = _state.asStateFlow()
-
-    // 🚀 SOLUCIÓN KMP: Generador alfanumérico aleatorio multiplataforma puro sin depender de JVM
-    private fun generarIdUnicoKmp(): String {
-        return (1..20).map { "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789".random() }.joinToString("")
-    }
 
     fun cargarRutinaYBiblioteca(atletaId: String, rutinaId: String, entrenadorId: String) {
         viewModelScope.launch {
@@ -134,7 +130,7 @@ class EditRutinaAsignadaViewModel : ViewModel() {
             val dias = actual.diasEntrenamiento.sortedBy { it.ordenSecuencia }.toMutableList()
             val dia = dias[diaIndex]
             val nuevoEjercicio = EjercicioAsignado(
-                idInterno = generarIdUnicoKmp(), // 🚀 ID Multiplataforma
+                idInterno = Uuid.random().toString(),
                 ejercicioGlobalId = ejercicioGlobal.id,
                 nombre = ejercicioGlobal.nombre,
                 seriesPrescritas = listOf(PrescripcionSerie(numeroSerie = 1, repeticiones = 10, tipo = TipoSerie.EFECTIVA)),
@@ -196,7 +192,7 @@ class EditRutinaAsignadaViewModel : ViewModel() {
 
             val ejerciciosDelDia = plantilla.ejercicios.mapIndexed { indexEj, ej ->
                 EjercicioAsignado(
-                    idInterno = generarIdUnicoKmp(), // 🚀 ID Multiplataforma
+                    idInterno = Uuid.random().toString(), // 🚀 ID Multiplataforma
                     ejercicioGlobalId = ej.ejercicioId,
                     nombre = ej.nombreEjercicio,
                     seriesPrescritas = ej.seriesPrescritas,
@@ -207,7 +203,7 @@ class EditRutinaAsignadaViewModel : ViewModel() {
             }
 
             val nuevoDia = DiaEntrenamientoAsignado(
-                idDia = generarIdUnicoKmp(), // 🚀 ID Multiplataforma
+                idDia = Uuid.random().toString(), // 🚀 ID Multiplataforma
                 plantillaOriginalId = plantilla.id,
                 nombreDia = plantilla.nombre,
                 ordenSecuencia = nuevoOrdenSecuencia,

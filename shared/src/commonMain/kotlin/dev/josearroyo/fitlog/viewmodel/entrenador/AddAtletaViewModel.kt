@@ -28,7 +28,7 @@ data class AddAtletaState(
     val planSeleccionado: TipoPlanSuscripcion = TipoPlanSuscripcion.MENSUAL,
     val diasPersonalizados: Int = 0,
     val iniciarPeriodoEnseguida: Boolean = true,
-    val fechaInicioPlan: Long = 0L, // 🟢 Guardamos la fecha diferida elegida
+    val fechaInicioPlan: Long = 0L,
     val isSaving: Boolean = false,
     val isSuccess: Boolean = false,
     val error: String? = null
@@ -136,18 +136,11 @@ class AddAtletaViewModel(
 
         viewModelScope.launch {
             try {
-                val existe = userRepository.existeCorreo(currentState.usuario.correo.trim())
-                if (existe) {
-                    _state.update { it.copy(isSaving = false, error = "El correo ya está registrado.") }
-                    return@launch
-                }
-
+                // 🟢 SE ELIMINÓ LA CONSULTA REPETIDA DE 'userRepository.existeCorreo'
                 val entrenadorId = atletaRepository.obtenerIdEntrenadorActual()
                     ?: throw Exception("No se pudo obtener el ID del entrenador actual.")
 
                 val ahoraMilis = getCurrentTimeMillis()
-
-                // 🟢 Si se activa de inmediato usamos 'ahoraMilis', sino, usamos la fecha diferida configurada
                 val fechaInicioLong = if (currentState.iniciarPeriodoEnseguida) ahoraMilis else currentState.fechaInicioPlan
 
                 val diasPlan = if (currentState.planSeleccionado == TipoPlanSuscripcion.PERSONALIZADO) {

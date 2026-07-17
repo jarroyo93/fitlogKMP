@@ -172,39 +172,43 @@ class EntrenarViewModel : ViewModel() {
 
         val contieneMensajesNuevos = currentState.sesionEnProgreso.ejerciciosRealizados.any { it.notasAtleta.isNotBlank() }
 
-        // 🟢 Mapeamos la ejecución usando el timestamp Long compatible con KMP
         val sesionFinal = currentState.sesionEnProgreso
             .copy(fechaEjecucion = getCurrentTimeMillis())
             .calcularMetricas()
 
         viewModelScope.launch {
-            _state.update { it.copy(isLoading = true) }
-            val usuario = userRepository.obtenerUsuario(authUid)
+            _state.update { it.copy(isLoading = true, error = null) }
+            try { // 🟢 Bloque try-catch para salvar la UI si falla la sincronización final
+                val usuario = userRepository.obtenerUsuario(authUid)
 
-            if (usuario != null) {
-                val metaSesiones = rutinaActual.diasEntrenamiento.size
+                if (usuario != null) {
+                    val metaSesiones = rutinaActual.diasEntrenamiento.size
 
-                val exito = atletaProgresoRepository.registrarSesionYActualizarCiclo(
-                    atletaId = usuario.id,
-                    sesionProcesada = sesionFinal,
-                    rutinaActual = rutinaActual,
-                    diaActual = diaActual,
-                    metaSesiones = metaSesiones
-                )
+                    val exito = atletaProgresoRepository.registrarSesionYActualizarCiclo(
+                        atletaId = usuario.id,
+                        sesionProcesada = sesionFinal,
+                        rutinaActual = rutinaActual,
+                        diaActual = diaActual,
+                        metaSesiones = metaSesiones
+                    )
 
-                if (exito) {
-                    BorradorLocalManager.eliminarBorradorLocal()
+                    if (exito) {
+                        BorradorLocalManager.eliminarBorradorLocal()
 
-                    if (contieneMensajesNuevos) {
-                        userRepository.actualizarPerfilUsuario(usuario.id, mapOf("tieneNotasNuevas" to true))
+                        if (contieneMensajesNuevos) {
+                            userRepository.actualizarPerfilUsuario(usuario.id, mapOf("tieneNotasNuevas" to true))
+                        }
+
+                        _state.update { it.copy(isLoading = false, isFinished = true) }
+                    } else {
+                        _state.update { it.copy(isLoading = false, error = "Error al guardar el progreso en el servidor.") }
                     }
-
-                    _state.update { it.copy(isLoading = false, isFinished = true) }
                 } else {
-                    _state.update { it.copy(isLoading = false, error = "Error al guardar el progreso.") }
+                    _state.update { it.copy(isLoading = false, error = "Usuario no encontrado.") }
                 }
-            } else {
-                _state.update { it.copy(isLoading = false, error = "Usuario no encontrado.") }
+            } catch (e: Exception) {
+                // Si la red se cae, la pantalla se desbloquea y muestra el error de forma segura
+                _state.update { it.copy(isLoading = false, error = e.message ?: "Fallo de conexión al guardar el entrenamiento") }
             }
         }
     }

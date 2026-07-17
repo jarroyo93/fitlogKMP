@@ -11,10 +11,10 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
-// Estado de Login
+// Estado de Login actualizado al estándar moderno de Kotlin 🟢
 sealed class AuthState {
-    object Idle : AuthState()
-    object Loading : AuthState()
+    data object Idle : AuthState()
+    data object Loading : AuthState()
     data class Success(val uid: String, val rol: RolUsuario) : AuthState()
     data class Error(val message: String) : AuthState()
 }
@@ -26,10 +26,10 @@ data class ActivationState(
     val error: String? = null
 )
 
-class AuthViewModel : ViewModel() {
-
-    private val authRepository = AuthRepository()
-    private val userRepository = UserRepository()
+class AuthViewModel(
+    private val authRepository: AuthRepository = AuthRepository(), // Inyección por constructor 🛠️
+    private val userRepository: UserRepository = UserRepository()
+) : ViewModel() {
 
     // --- Flujo de Login ---
     private val _authState = MutableStateFlow<AuthState>(AuthState.Idle)
@@ -44,10 +44,10 @@ class AuthViewModel : ViewModel() {
     // ==========================================
     fun login(email: String, clave: String) {
         if (email.isBlank() || clave.isBlank()) {
-            _authState.value = AuthState.Error("El correo y la contraseña son obligatorios")
+            _authState.update { AuthState.Error("El correo y la contraseña son obligatorios") }
             return
         }
-        _authState.value = AuthState.Loading
+        _authState.update { AuthState.Loading } // Actualización atómica de estado 🟢
 
         viewModelScope.launch {
             try {
@@ -55,18 +55,18 @@ class AuthViewModel : ViewModel() {
                 val usuario = userRepository.obtenerUsuario(uid)
 
                 if (usuario != null) {
-                    _authState.value = AuthState.Success(uid, usuario.rol)
+                    _authState.update { AuthState.Success(uid, usuario.rol) }
                 } else {
-                    _authState.value = AuthState.Error("Usuario autenticado, pero sin perfil en la base de datos")
+                    _authState.update { AuthState.Error("Usuario autenticado, pero sin perfil en la base de datos") }
                 }
             } catch (e: Exception) {
-                _authState.value = AuthState.Error(e.message ?: "Error al iniciar sesión")
+                _authState.update { AuthState.Error(e.message ?: "Error al iniciar sesión") }
             }
         }
     }
 
     fun resetState() {
-        _authState.value = AuthState.Idle
+        _authState.update { AuthState.Idle }
     }
 
     // ==========================================

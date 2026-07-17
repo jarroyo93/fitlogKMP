@@ -11,9 +11,10 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.supervisorScope
 
 data class NotaReciente(
-    val fecha: Long, // 🚀 KMP SAFE: Timestamps en milisegundos en lugar de java.util.Date
+    val fecha: Long,
     val rutinaNombre: String,
     val ejercicioNombre: String,
     val mensaje: String
@@ -25,8 +26,8 @@ data class InformeCoach(
     val rpePromedioGlobal: Double = 0.0,
     val rpePromedioPorEjercicio: Map<String, Double> = emptyMap(),
     val totalSesiones: Int = 0,
-    val fechaInicio: Long? = null, // 🚀 KMP SAFE
-    val fechaFin: Long? = null    // 🚀 KMP SAFE
+    val fechaInicio: Long? = null,
+    val fechaFin: Long? = null
 )
 
 data class AtletaDetailState(
@@ -39,9 +40,10 @@ data class AtletaDetailState(
     val error: String? = null
 )
 
-class AtletaDetailViewModel : ViewModel() {
-    private val atletaRepository = AtletaRepository()
-    private val progresoRepository = AtletaProgresoRepository()
+class AtletaDetailViewModel(
+    private val atletaRepository: AtletaRepository = AtletaRepository(),
+    private val progresoRepository: AtletaProgresoRepository = AtletaProgresoRepository()
+) : ViewModel() {
 
     private val _state = MutableStateFlow(AtletaDetailState())
     val state: StateFlow<AtletaDetailState> = _state.asStateFlow()
@@ -52,81 +54,83 @@ class AtletaDetailViewModel : ViewModel() {
         viewModelScope.launch {
             _state.update { it.copy(isLoading = true, error = null) }
             try {
-                // 🚀 CONCURRENCIA PARALELA MULTIPLATAFORMA: Optimizamos tiempos de carga en red
-                val atletaDeferred = async { atletaRepository.obtenerUsuario(atletaId) }
-                val cicloDeferred = async { progresoRepository.obtenerCicloActivo(atletaId) }
-                val rutinasDeferred = async { atletaRepository.obtenerRutinasActivas(atletaId) }
-                val sesionesDeferred = async { progresoRepository.obtenerHistorialEntrenamientos(atletaId) }
+                // supervisorScope aísla las fallas de red individuales impidiendo crashes 🟢
+                supervisorScope {
+                    val atletaDeferred = async { atletaRepository.obtenerUsuario(atletaId) }
+                    val cicloDeferred = async { progresoRepository.obtenerCicloActivo(atletaId) }
+                    val rutinasDeferred = async { atletaRepository.obtenerRutinasActivas(atletaId) }
+                    val sesionesDeferred = async { progresoRepository.obtenerHistorialEntrenamientos(atletaId) }
 
-                val atleta = atletaDeferred.await()
-                val cicloActivo = cicloDeferred.await()
-                val rutinas = rutinasDeferred.await()
-                val sesionesHistorial = sesionesDeferred.await()
+                    val atleta = atletaDeferred.await()
+                    val cicloActivo = cicloDeferred.await()
+                    val rutinas = rutinasDeferred.await()
+                    val sesionesHistorial = sesionesDeferred.await()
 
-                if (atleta != null) {
-                    val rutinaActiva = rutinas.firstOrNull { it.estaActiva }
+                    if (atleta != null) {
+                        val rutinaActiva = rutinas.firstOrNull { it.estaActiva }
 
-                    // 1. Extraer los últimos comentarios del atleta
-                    val notasExtraidas = sesionesHistorial.flatMap { sesion ->
-                        sesion.ejerciciosRealizados
-                            .filter { it.notasAtleta.isNotBlank() }
-                            .map { ej ->
-                                NotaReciente(
-                                    fecha = sesion.fechaEjecucion,
-                                    rutinaNombre = sesion.nombreRutina,
-                                    ejercicioNombre = ej.nombreEjercicio,
-                                    mensaje = ej.notasAtleta
-                                )
+                        // 1. Extraer comentarios
+                        val notasExtraidas = sesionesHistorial.flatMap { sesion ->
+                            sesion.ejerciciosRealizados
+                                .filter { it.notasAtleta.isNotBlank() }
+                                .map { ej ->
+                                    NotaReciente(
+                                        fecha = sesion.fechaEjecucion,
+                                        rutinaNombre = sesion.nombreRutina,
+                                        ejercicioNombre = ej.nombreEjercicio,
+                                        mensaje = ej.notasAtleta
+                                    )
+                                }
+                        }.take(3)
+
+                        // 2. Procesar RPE
+                        val todasLasSeriesConRpe = sesionesHistorial
+                            .flatMap { it.ejerciciosRealizados }
+                            .filter { !it.fueSaltado }
+                            .flatMap { ej ->
+                                ej.seriesRealizadas.mapNotNull { serie ->
+                                    serie.rpe?.let { rpe -> ej.nombreEjercicio to rpe.toDouble() }
+                                }
                             }
-                    }.take(3)
 
-                    // 2. Procesar y promediar RPE
-                    val todasLasSeriesConRpe = sesionesHistorial
-                        .flatMap { it.ejerciciosRealizados }
-                        .filter { !it.fueSaltado }
-                        .flatMap { ej ->
-                            ej.seriesRealizadas.mapNotNull { serie ->
-                                serie.rpe?.let { rpe -> ej.nombreEjercicio to rpe.toDouble() }
-                            }
-                        }
+                        val rpeGlobal = if (todasLasSeriesConRpe.isNotEmpty()) {
+                            todasLasSeriesConRpe.map { it.second }.average()
+                        } else 0.0
 
-                    val rpeGlobal = if (todasLasSeriesConRpe.isNotEmpty()) {
-                        todasLasSeriesConRpe.map { it.second }.average()
-                    } else 0.0
+                        val rpePorEj = todasLasSeriesConRpe.groupBy { it.first }
+                            .mapValues { entry -> entry.value.map { it.second }.average() }
+                            .toList()
+                            .sortedByDescending { it.second }
+                            .take(3)
+                            .toMap()
 
-                    val rpePorEj = todasLasSeriesConRpe.groupBy { it.first }
-                        .mapValues { entry -> entry.value.map { it.second }.average() }
-                        .toList()
-                        .sortedByDescending { it.second }
-                        .take(3)
-                        .toMap()
-
-                    // 3. Estructurar informe operacional del Ciclo
-                    val informe = InformeCoach(
-                        asistenciaPorcentaje = cicloActivo?.porcentajeAsistencia ?: 0.0,
-                        cumplimientoVolumen = cicloActivo?.porcentajeVolumenGlobal ?: 0.0,
-                        rpePromedioGlobal = rpeGlobal,
-                        rpePromedioPorEjercicio = rpePorEj,
-                        totalSesiones = sesionesHistorial.size,
-                        fechaInicio = cicloActivo?.fechaInicio,
-                        fechaFin = cicloActivo?.fechaCierre
-                    )
-
-                    _state.update {
-                        it.copy(
-                            atleta = atleta,
-                            cicloActivo = cicloActivo,
-                            rutinaActiva = rutinaActiva,
-                            notasRecientes = notasExtraidas,
-                            informeCoach = informe,
-                            isLoading = false
+                        // 3. Estructurar Informe
+                        val informe = InformeCoach(
+                            asistenciaPorcentaje = cicloActivo?.porcentajeAsistencia ?: 0.0,
+                            cumplimientoVolumen = cicloActivo?.porcentajeVolumenGlobal ?: 0.0,
+                            rpePromedioGlobal = rpeGlobal,
+                            rpePromedioPorEjercicio = rpePorEj,
+                            totalSesiones = sesionesHistorial.size,
+                            fechaInicio = cicloActivo?.fechaInicio,
+                            fechaFin = cicloActivo?.fechaCierre
                         )
+
+                        _state.update {
+                            it.copy(
+                                atleta = atleta,
+                                cicloActivo = cicloActivo,
+                                rutinaActiva = rutinaActiva,
+                                notasRecientes = notasExtraidas,
+                                informeCoach = informe,
+                                isLoading = false
+                            )
+                        }
+                    } else {
+                        _state.update { it.copy(isLoading = false, error = "No se encontró al atleta.") }
                     }
-                } else {
-                    _state.update { it.copy(isLoading = false, error = "No se encontró el atleta.") }
                 }
             } catch (e: Exception) {
-                _state.update { it.copy(isLoading = false, error = e.message ?: "Error al procesar expediente") }
+                _state.update { it.copy(isLoading = false, error = e.message ?: "Error al procesar el expediente") }
             }
         }
     }

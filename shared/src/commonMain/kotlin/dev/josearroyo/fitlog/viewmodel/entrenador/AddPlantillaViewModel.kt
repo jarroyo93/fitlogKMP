@@ -13,11 +13,15 @@ data class AddPlantillaState(
     val nombrePlantilla: String = "",
     val ejerciciosEnCarrito: List<ElementoRutina> = emptyList(),
     val bibliotecaDisponible: List<Ejercicio> = emptyList(),
-    val isGuardado: Boolean = false
+    val isLoading: Boolean = false, // Agregado para feedback visual 🟢
+    val isGuardado: Boolean = false,
+    val error: String? = null        // Agregado para fallos de red 🟢
 )
 
-class AddPlantillaViewModel : ViewModel() {
-    private val repository = ExerciseRepository()
+class AddPlantillaViewModel(
+    private val repository: ExerciseRepository = ExerciseRepository()
+) : ViewModel() {
+
     private val _state = MutableStateFlow(AddPlantillaState())
     val state = _state.asStateFlow()
 
@@ -25,8 +29,12 @@ class AddPlantillaViewModel : ViewModel() {
 
     fun cargarBiblioteca(entrenadorId: String) {
         viewModelScope.launch {
-            val lista = repository.obtenerBibliotecaCompleta(entrenadorId)
-            _state.update { it.copy(bibliotecaDisponible = lista) }
+            try {
+                val lista = repository.obtenerBibliotecaCompleta(entrenadorId)
+                _state.update { it.copy(bibliotecaDisponible = lista) }
+            } catch (e: Exception) {
+                _state.update { it.copy(error = "No se pudo cargar la biblioteca de ejercicios.") }
+            }
         }
     }
 
@@ -36,8 +44,22 @@ class AddPlantillaViewModel : ViewModel() {
 
         plantillaIdActual = plantillaId
         viewModelScope.launch {
-            repository.obtenerPlantillaPorId(plantillaId)?.let { existente ->
-                _state.update { it.copy(nombrePlantilla = existente.nombre, ejerciciosEnCarrito = existente.ejercicios) }
+            _state.update { it.copy(isLoading = true, error = null) }
+            try {
+                val existente = repository.obtenerPlantillaPorId(plantillaId)
+                if (existente != null) {
+                    _state.update {
+                        it.copy(
+                            nombrePlantilla = existente.nombre,
+                            ejerciciosEnCarrito = existente.ejercicios,
+                            isLoading = false
+                        )
+                    }
+                } else {
+                    _state.update { it.copy(isLoading = false) }
+                }
+            } catch (e: Exception) {
+                _state.update { it.copy(isLoading = false, error = "Error al descargar la plantilla.") }
             }
         }
     }
@@ -80,11 +102,18 @@ class AddPlantillaViewModel : ViewModel() {
     }
 
     fun guardarPlantilla(entrenadorId: String) {
+        val currentState = _state.value
+        if (currentState.nombrePlantilla.isBlank() || currentState.ejerciciosEnCarrito.isEmpty()) {
+            _state.update { it.copy(error = "Completa el nombre y añade al menos un ejercicio.") }
+            return
+        }
+
         viewModelScope.launch {
+            _state.update { it.copy(isLoading = true, error = null) }
             val nuevaPlantilla = PlantillaRutina(
-                nombre = _state.value.nombrePlantilla,
+                nombre = currentState.nombrePlantilla,
                 entrenadorId = entrenadorId,
-                ejercicios = _state.value.ejerciciosEnCarrito,
+                ejercicios = currentState.ejerciciosEnCarrito,
                 activo = true
             )
             try {
@@ -93,8 +122,10 @@ class AddPlantillaViewModel : ViewModel() {
                 } else {
                     repository.guardarPlantillaRutina(nuevaPlantilla)
                 }
-                _state.update { it.copy(isGuardado = true) }
-            } catch (e: Exception) { e.printStackTrace() }
+                _state.update { it.copy(isLoading = false, isGuardado = true) }
+            } catch (e: Exception) {
+                _state.update { it.copy(isLoading = false, error = e.message ?: "Error al guardar la plantilla") }
+            }
         }
     }
 }

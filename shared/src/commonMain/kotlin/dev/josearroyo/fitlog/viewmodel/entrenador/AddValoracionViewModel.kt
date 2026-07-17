@@ -12,11 +12,14 @@ import kotlinx.coroutines.launch
 data class AddValoracionState(
     val valoracion: ValoracionFisica = ValoracionFisica(),
     val isGuardado: Boolean = false,
-    val isLoading: Boolean = false
+    val isLoading: Boolean = false,
+    val error: String? = null // Agregado 🟢
 )
 
-class AddValoracionViewModel : ViewModel() {
-    private val repository = AtletaRepository()
+class AddValoracionViewModel(
+    private val repository: AtletaRepository = AtletaRepository()
+) : ViewModel() {
+
     private val _state = MutableStateFlow(AddValoracionState())
     val state = _state.asStateFlow()
 
@@ -27,16 +30,24 @@ class AddValoracionViewModel : ViewModel() {
     fun guardar(atletaId: String) {
         val actual = _state.value.valoracion
         if (actual.pesoKg <= 0.0 || actual.alturaCm <= 0.0 || actual.objetivoInicial.isBlank()) {
+            _state.update { it.copy(error = "Por favor, completa correctamente el peso, altura y objetivo.") }
             return
         }
 
         viewModelScope.launch {
-            _state.update { it.copy(isLoading = true) }
-            val exito = repository.guardarValoracion(atletaId, _state.value.valoracion)
-            if (exito) {
-                _state.update { it.copy(isGuardado = true) }
+            _state.update { it.copy(isLoading = true, error = null) }
+            try {
+                val exito = repository.guardarValoracion(atletaId, _state.value.valoracion)
+                if (exito) {
+                    _state.update { it.copy(isGuardado = true) }
+                } else {
+                    _state.update { it.copy(error = "No se pudieron almacenar los datos en el servidor.") }
+                }
+            } catch (e: Exception) {
+                _state.update { it.copy(error = e.message ?: "Ocurrió un error inesperado de conexión.") }
+            } finally {
+                _state.update { it.copy(isLoading = false) }
             }
-            _state.update { it.copy(isLoading = false) }
         }
     }
 }

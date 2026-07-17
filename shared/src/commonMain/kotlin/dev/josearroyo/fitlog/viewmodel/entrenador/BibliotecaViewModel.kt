@@ -19,7 +19,8 @@ data class BibliotecaState(
     val isLoading: Boolean = false,
     val listaPlantillas: List<PlantillaRutina> = emptyList(),
     val isLoadingPlantillas: Boolean = false,
-    val tabSeleccionado: Int = 0
+    val tabSeleccionado: Int = 0,
+    val error: String? = null // 🟢 Exponemos los errores de red a la UI
 )
 
 class BibliotecaViewModel : ViewModel() {
@@ -34,25 +35,37 @@ class BibliotecaViewModel : ViewModel() {
 
     fun cargarBiblioteca(entrenadorId: String) {
         viewModelScope.launch {
-            _state.update { it.copy(isLoading = true) }
+            _state.update { it.copy(isLoading = true, error = null) }
             try {
                 val ejercicios = repository.obtenerBibliotecaCompleta(entrenadorId)
-                _state.update { it.copy(listaCompleta = ejercicios, isLoading = false) }
-                aplicarFiltros(_state.value.textoBusqueda, _state.value.grupoSeleccionado)
+
+                // ⚡ OPTIMIZACIÓN: Calculamos y emitimos todo en un solo ciclo atómico (cero parpadeos)
+                _state.update { currentState ->
+                    val resultadoFiltrado = ejercicios.filter { ejercicio ->
+                        val coincideNombre = ejercicio.nombre.contains(currentState.textoBusqueda, ignoreCase = true)
+                        val coincideGrupo = currentState.grupoSeleccionado == null || ejercicio.grupoMuscular == currentState.grupoSeleccionado
+                        coincideNombre && coincideGrupo
+                    }
+                    currentState.copy(
+                        listaCompleta = ejercicios,
+                        listaFiltrada = resultadoFiltrado,
+                        isLoading = false
+                    )
+                }
             } catch (e: Exception) {
-                _state.update { it.copy(isLoading = false) }
+                _state.update { it.copy(isLoading = false, error = e.message ?: "Error al cargar la biblioteca") }
             }
         }
     }
 
     fun cargarPlantillas(entrenadorId: String) {
         viewModelScope.launch {
-            _state.update { it.copy(isLoadingPlantillas = true) }
+            _state.update { it.copy(isLoadingPlantillas = true, error = null) }
             try {
                 val plantillas = repository.obtenerPlantillasDelEntrenador(entrenadorId)
                 _state.update { it.copy(listaPlantillas = plantillas, isLoadingPlantillas = false) }
             } catch (e: Exception) {
-                _state.update { it.copy(isLoadingPlantillas = false) }
+                _state.update { it.copy(isLoadingPlantillas = false, error = e.message ?: "Error al cargar plantillas") }
             }
         }
     }
@@ -66,17 +79,18 @@ class BibliotecaViewModel : ViewModel() {
     }
 
     private fun aplicarFiltros(nuevoTexto: String, nuevoGrupo: GrupoMuscular?) {
-        val resultado = _state.value.listaCompleta.filter { ejercicio ->
-            val coincideNombre = ejercicio.nombre.contains(nuevoTexto, ignoreCase = true)
-            val coincideGrupo = nuevoGrupo == null || ejercicio.grupoMuscular == nuevoGrupo
-            coincideNombre && coincideGrupo
+        _state.update { currentState ->
+            val resultado = currentState.listaCompleta.filter { ejercicio ->
+                val coincideNombre = ejercicio.nombre.contains(nuevoTexto, ignoreCase = true)
+                val coincideGrupo = nuevoGrupo == null || ejercicio.grupoMuscular == nuevoGrupo
+                coincideNombre && coincideGrupo
+            }
+            currentState.copy(
+                listaFiltrada = resultado,
+                textoBusqueda = nuevoTexto,
+                grupoSeleccionado = nuevoGrupo
+            )
         }
-
-        _state.update { it.copy(
-            listaFiltrada = resultado,
-            textoBusqueda = nuevoTexto,
-            grupoSeleccionado = nuevoGrupo
-        ) }
     }
 
     fun cambiarPestana(nuevoIndex: Int) {
@@ -89,23 +103,31 @@ class BibliotecaViewModel : ViewModel() {
 
     fun eliminarEjercicioPersonalizado(ejercicioId: String, entrenadorId: String) {
         viewModelScope.launch {
+            _state.update { it.copy(isLoading = true, error = null) }
             try {
                 repository.eliminarEjercicioFisico(ejercicioId)
                 cargarBiblioteca(entrenadorId)
             } catch (e: Exception) {
-                // Manejo de errores en red
+                // 🟢 Ahora la UI se entera si el servidor rechazó el borrado
+                _state.update { it.copy(isLoading = false, error = e.message ?: "No se pudo eliminar el ejercicio") }
             }
         }
     }
 
     fun eliminarPlantilla(plantillaId: String, entrenadorId: String) {
         viewModelScope.launch {
+            _state.update { it.copy(isLoadingPlantillas = true, error = null) }
             try {
                 repository.eliminarPlantillaFisica(plantillaId)
                 cargarPlantillas(entrenadorId)
             } catch (e: Exception) {
-                // Manejo de errores en red
+                // 🟢 Captura el fallo de red o permisos al borrar plantillas
+                _state.update { it.copy(isLoadingPlantillas = false, error = e.message ?: "No se pudo eliminar la plantilla") }
             }
         }
+    }
+
+    fun clearError() {
+        _state.update { it.copy(error = null) }
     }
 }

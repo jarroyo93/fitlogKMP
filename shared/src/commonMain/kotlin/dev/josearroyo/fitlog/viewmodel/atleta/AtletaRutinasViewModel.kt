@@ -31,7 +31,7 @@ class AtletaRutinasViewModel : ViewModel() {
                 val usuario = userRepository.obtenerUsuario(authUid)
 
                 if (usuario == null) {
-                    _state.update { it.copy(isLoading = false, error = "Usuario no encontrado en BD.") }
+                    _state.update { it.copy(isLoading = false, error = "Usuario no encontrado en la base de datos.") }
                     return@launch
                 }
 

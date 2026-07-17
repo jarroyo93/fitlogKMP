@@ -116,23 +116,26 @@ class FacturacionViewModel : ViewModel() {
 
             val fechaFinLong = calcularFechaFinSuscripcion(fechaInicioLong, diasDelPlan)
 
-            // 🚀 DETERMINAR SI EL NUEVO PERIODO INICIA EN DIFERIDO O ACTIVO
             val tienePlanActivoCorriendo = atleta.estadoSuscripcion == EstadoSuscripcion.ACTIVO &&
                     (atleta.vencimientoSuscripcion ?: 0L) > ahora
             val estadoPeriodoCalculado = if (tienePlanActivoCorriendo) EstadoPeriodo.DIFERIDO else EstadoPeriodo.ACTIVO
 
             _state.update { it.copy(isLoading = true) }
-            val exito = userRepository.renovarSuscripcion(
-                atletaId = atletaId,
-                entrenadorId = entrenadorId,
-                planActivo = tipoPlan.name,           // 🚀 Corregido: Mapeado a String
-                fechaInicio = fechaInicioLong,
-                fechaFin = fechaFinLong,
-                estadoPeriodo = estadoPeriodoCalculado // 🚀 Corregido: Envío del Enum esperado
-            )
-            if (exito) {
-                cargarAtletas(entrenadorId)
-            } else {
+            try { // 🟢 Protegido contra caídas de red durante la transacción
+                val exito = userRepository.renovarSuscripcion(
+                    atletaId = atletaId,
+                    entrenadorId = entrenadorId,
+                    planActivo = tipoPlan.name,
+                    fechaInicio = fechaInicioLong,
+                    fechaFin = fechaFinLong,
+                    estadoPeriodo = estadoPeriodoCalculado
+                )
+                if (exito) {
+                    cargarAtletas(entrenadorId)
+                } else {
+                    _state.update { it.copy(isLoading = false) }
+                }
+            } catch (e: Exception) {
                 _state.update { it.copy(isLoading = false) }
             }
         }
@@ -147,10 +150,14 @@ class FacturacionViewModel : ViewModel() {
             val saldoMilis = if (vencimiento > ahora) vencimiento - ahora else 0L
 
             _state.update { it.copy(isLoading = true) }
-            val exito = userRepository.pausarAtleta(atletaId, motivo, saldoMilis)
-            if (exito) {
-                cargarAtletas(entrenadorId)
-            } else {
+            try {
+                val exito = userRepository.pausarAtleta(atletaId, motivo, saldoMilis)
+                if (exito) {
+                    cargarAtletas(entrenadorId)
+                } else {
+                    _state.update { it.copy(isLoading = false) }
+                }
+            } catch (e: Exception) {
                 _state.update { it.copy(isLoading = false) }
             }
         }
@@ -165,11 +172,14 @@ class FacturacionViewModel : ViewModel() {
             val nuevaFechaFin = ahora + saldoMilis
 
             _state.update { it.copy(isLoading = true) }
-            // 🚀 Corregido: Eliminado entrenadorId para satisfacer el formato del Repository (2 parámetros)
-            val exito = userRepository.reactivarAtleta(atletaId, nuevaFechaFin)
-            if (exito) {
-                cargarAtletas(entrenadorId)
-            } else {
+            try {
+                val exito = userRepository.reactivarAtleta(atletaId, nuevaFechaFin)
+                if (exito) {
+                    cargarAtletas(entrenadorId)
+                } else {
+                    _state.update { it.copy(isLoading = false) }
+                }
+            } catch (e: Exception) {
                 _state.update { it.copy(isLoading = false) }
             }
         }

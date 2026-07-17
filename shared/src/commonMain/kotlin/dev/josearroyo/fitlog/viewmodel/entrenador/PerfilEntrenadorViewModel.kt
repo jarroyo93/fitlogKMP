@@ -28,47 +28,59 @@ class PerfilEntrenadorViewModel : ViewModel() {
 
     fun cargarPerfil(uid: String) {
         viewModelScope.launch {
-            _uiState.value = _uiState.value.copy(isLoading = true, error = null)
-            val user = userRepository.obtenerUsuario(uid)
-            if (user != null) {
-                _uiState.value = _uiState.value.copy(usuarioLogueado = user, isLoading = false)
-                if (user.entrenadorId != null) {
-                    cargarEntrenadorAsignado(user.entrenadorId)
+            _uiState.update { it.copy(isLoading = true, error = null) } // 🟢 Cambiado a .update
+            try {
+                val user = userRepository.obtenerUsuario(uid)
+                if (user != null) {
+                    _uiState.update { it.copy(usuarioLogueado = user, isLoading = false) }
+                    if (user.entrenadorId != null) {
+                        cargarEntrenadorAsignado(user.entrenadorId)
+                    }
+                } else {
+                    _uiState.update { it.copy(isLoading = false, error = "No se encontró el perfil.") }
                 }
-            } else {
-                _uiState.value = _uiState.value.copy(isLoading = false, error = "No se encontró el perfil.")
+            } catch (e: Exception) {
+                _uiState.update { it.copy(isLoading = false, error = e.message) }
             }
         }
     }
 
     private fun cargarEntrenadorAsignado(entrenadorId: String) {
         viewModelScope.launch {
-            val entrenador = userRepository.obtenerUsuario(entrenadorId)
-            _uiState.value = _uiState.value.copy(entrenadorAsignado = entrenador)
+            try {
+                val entrenador = userRepository.obtenerUsuario(entrenadorId)
+                _uiState.update { it.copy(entrenadorAsignado = entrenador) } // 🟢 Cambiado a .update
+            } catch (e: Exception) { /* Silencioso o loguear */ }
         }
     }
 
     fun guardarPerfilEntrenador(uid: String, especialidad: String, biografia: String, certificaciones: List<String>) {
         viewModelScope.launch {
-            _uiState.value = _uiState.value.copy(isSaving = true, exitoGuardado = false)
+            _uiState.update { it.copy(isSaving = true, exitoGuardado = false) }
             val campos = mapOf(
                 "especialidad" to especialidad,
                 "biografia" to biografia,
                 "certificaciones" to certificaciones
             )
-            val exito = userRepository.actualizarPerfilUsuario(uid, campos)
-            if (exito) {
-                _uiState.value = _uiState.value.copy(
-                    isSaving = false,
-                    exitoGuardado = true,
-                    usuarioLogueado = _uiState.value.usuarioLogueado?.copy(
-                        especialidad = especialidad,
-                        biografia = biografia,
-                        certificaciones = certificaciones
-                    )
-                )
-            } else {
-                _uiState.value = _uiState.value.copy(isSaving = false, error = "Error al actualizar base de datos.")
+            try {
+                val exito = userRepository.actualizarPerfilUsuario(uid, campos)
+                if (exito) {
+                    _uiState.update { state ->
+                        state.copy(
+                            isSaving = false,
+                            exitoGuardado = true,
+                            usuarioLogueado = state.usuarioLogueado?.copy(
+                                especialidad = especialidad,
+                                biografia = biografia,
+                                certificaciones = certificaciones
+                            )
+                        )
+                    }
+                } else {
+                    _uiState.update { it.copy(isSaving = false, error = "Error al actualizar la base de datos.") }
+                }
+            } catch (e: Exception) {
+                _uiState.update { it.copy(isSaving = false, error = e.message) }
             }
         }
     }

@@ -8,6 +8,7 @@ import dev.josearroyo.fitlog.data.model.Usuario
 import dev.josearroyo.fitlog.data.model.RutinaAsignada
 import dev.josearroyo.fitlog.repository.AtletaRepository
 import dev.josearroyo.fitlog.repository.UserRepository
+import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -35,26 +36,37 @@ class PerfilAtletaViewModel : ViewModel() {
     fun cargarPerfil(atletaId: String) {
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true, error = null) }
-            val atleta = atletaRepository.obtenerUsuario(atletaId)
+            try { // 🟢 Try-catch global de lectura
+                val atleta = atletaRepository.obtenerUsuario(atletaId)
 
-            if (atleta != null) {
-                val coach = if (!atleta.entrenadorId.isNullOrBlank()) {
-                    userRepository.obtenerUsuario(atleta.entrenadorId)
-                } else null
+                if (atleta != null) {
+                    // 🚀 Concurrencia paralela para acelerar la carga del perfil
+                    kotlinx.coroutines.supervisorScope {
+                        val coachDeferred = async {
+                            if (!atleta.entrenadorId.isNullOrBlank()) {
+                                userRepository.obtenerUsuario(atleta.entrenadorId)
+                            } else null
+                        }
+                        val rutinasDeferred = async { atletaRepository.obtenerRutinasActivas(atletaId) }
 
-                val rutinas = atletaRepository.obtenerRutinasActivas(atletaId)
-                val rutinaActiva = rutinas.firstOrNull { it.estaActiva }
+                        val coach = coachDeferred.await()
+                        val rutinas = rutinasDeferred.await()
+                        val rutinaActiva = rutinas.firstOrNull { it.estaActiva }
 
-                _uiState.update { state ->
-                    state.copy(
-                        usuarioLogueado = atleta,
-                        entrenadorAsignado = coach,
-                        rutinaActiva = rutinaActiva,
-                        isLoading = false
-                    )
+                        _uiState.update { state ->
+                            state.copy(
+                                usuarioLogueado = atleta,
+                                entrenadorAsignado = coach,
+                                rutinaActiva = rutinaActiva,
+                                isLoading = false
+                            )
+                        }
+                    }
+                } else {
+                    _uiState.update { it.copy(isLoading = false, error = "No se pudo cargar el perfil.") }
                 }
-            } else {
-                _uiState.update { it.copy(isLoading = false, error = "No se pudo cargar el perfil.") }
+            } catch (e: Exception) {
+                _uiState.update { it.copy(isLoading = false, error = e.message ?: "Error de conexión") }
             }
         }
     }

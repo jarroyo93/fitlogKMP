@@ -9,7 +9,8 @@ import dev.josearroyo.fitlog.data.model.Usuario
 import dev.josearroyo.fitlog.repository.AtletaProgresoRepository
 import dev.josearroyo.fitlog.repository.AtletaRepository
 import dev.josearroyo.fitlog.repository.UserRepository
-import dev.josearroyo.fitlog.getCurrentTimeMillis // 🟢 Usamos tu función expect multiplataforma
+import dev.josearroyo.fitlog.getCurrentTimeMillis
+import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -46,22 +47,28 @@ class AtletaInicioViewModel : ViewModel() {
                 }
                 currentAtletaId = usuario.id
 
-                val rutinas = atletaRepository.obtenerRutinasActivas(usuario.id)
-                val pesajes = atletaProgresoRepository.obtenerUltimosPesajes(usuario.id, limite = 4)
-                val ciclo = atletaProgresoRepository.obtenerCicloActivo(usuario.id)
 
-                _state.update {
-                    it.copy(
-                        isLoading = false,
-                        usuario = usuario,
-                        rutinasSugeridas = rutinas,
-                        ultimosPesajes = pesajes,
-                        cicloActivo = ciclo
-                    )
+                kotlinx.coroutines.supervisorScope {
+                    val rutinasDeferred = async { atletaRepository.obtenerRutinasActivas(usuario.id) }
+                    val pesajesDeferred = async { atletaProgresoRepository.obtenerUltimosPesajes(usuario.id, limite = 4) }
+                    val cicloDeferred = async { atletaProgresoRepository.obtenerCicloActivo(usuario.id) }
+
+                    val rutinas = rutinasDeferred.await()
+                    val pesajes = pesajesDeferred.await()
+                    val ciclo = cicloDeferred.await()
+
+                    _state.update {
+                        it.copy(
+                            isLoading = false,
+                            usuario = usuario,
+                            rutinasSugeridas = rutinas,
+                            ultimosPesajes = pesajes,
+                            cicloActivo = ciclo
+                        )
+                    }
                 }
-
             } catch (e: Exception) {
-                _state.update { it.copy(isLoading = false, error = e.message) }
+                _state.update { it.copy(isLoading = false, error = e.message ?: "Error al cargar datos") }
             }
         }
     }
@@ -69,15 +76,18 @@ class AtletaInicioViewModel : ViewModel() {
     fun registrarPeso(pesoKg: Double, notas: String) {
         val atletaId = currentAtletaId ?: return
         viewModelScope.launch {
-            // 🟢 Modificado: Pasamos el Timestamp Long de KMP en vez de un Date() de Java
-            val nuevoPesaje = Pesaje(
-                pesoKg = pesoKg,
-                notas = notas,
-                fecha = getCurrentTimeMillis()
-            )
-            val exito = atletaProgresoRepository.registrarPesaje(atletaId, nuevoPesaje)
-            if (exito) {
-                cargarDashboard(atletaId)
+            try { // 🟢 Protegido contra caídas de red al guardar peso
+                val nuevoPesaje = Pesaje(
+                    pesoKg = pesoKg,
+                    notas = notas,
+                    fecha = getCurrentTimeMillis()
+                )
+                val exito = atletaProgresoRepository.registrarPesaje(atletaId, nuevoPesaje)
+                if (exito) {
+                    cargarDashboard(atletaId)
+                }
+            } catch (e: Exception) {
+                _state.update { it.copy(error = "No se pudo registrar el peso: ${e.message}") }
             }
         }
     }
