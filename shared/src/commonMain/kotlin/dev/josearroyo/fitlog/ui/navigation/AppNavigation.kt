@@ -4,7 +4,6 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -12,7 +11,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.style.TextAlign
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
@@ -41,7 +39,12 @@ import dev.josearroyo.fitlog.ui.dashboard.entrenador.AddPlantillaScreen
 import dev.josearroyo.fitlog.ui.dashboard.entrenador.BibliotecaScreen
 import dev.josearroyo.fitlog.ui.profile.EditarDatosPersonalesScreen
 import dev.josearroyo.fitlog.ui.dashboard.entrenador.AddAtletaScreen
+import dev.josearroyo.fitlog.ui.dashboard.entrenador.HistorialFacturacionScreen
 import dev.josearroyo.fitlog.viewmodel.entrenador.AddAtletaViewModel
+
+// 🟢 NUEVAS IMPORTACIONES MULTIPLATAFORMA DE FACTURACIÓN
+
+import dev.josearroyo.fitlog.ui.dashboard.entrenador.InformeFacturacionGlobalScreen
 
 @Composable
 fun AppNavigation() {
@@ -120,15 +123,19 @@ fun AppNavigation() {
                     navController.navigate("edit_plantilla/$idEnt/$idPlan")
                 },
                 onNavigateToAddAtleta = {
-                    navController.navigate("agregar_atleta") // 🚀 AHORA NAVEGA A TU FORMULARIO KMP
+                    navController.navigate("agregar_atleta")
                 },
                 onNavigateToEditarDatosPersonales = { entrenadorId ->
                     navController.navigate("editar_datos_personales/$entrenadorId")
                 },
-                onNavigateToHistorialFacturacion = { atletaId, _ ->
-                    println("Navegación incremental KMP: Abrir historial de cobros del atleta $atletaId")
+                // 🟢 CORRECCIÓN: Activamos la navegación real hacia el historial del atleta
+                onNavigateToHistorialFacturacion = { atletaId, entrenadorId ->
+                    navController.navigate("historial_facturacion/$atletaId/$entrenadorId")
                 },
-                onNavigateToInformeGlobalFacturacion = { _ -> },
+                // 🟢 CORRECCIÓN: Activamos la navegación real hacia el informe contable general
+                onNavigateToInformeGlobalFacturacion = { entrenadorId ->
+                    navController.navigate("informe_global_facturacion/$entrenadorId")
+                },
                 onLogout = {
                     navController.navigate("login") {
                         popUpTo(0) { inclusive = true }
@@ -138,10 +145,39 @@ fun AppNavigation() {
         }
 
         // ============================================================
+        // 📊 MÓDULO DE FACTURACIÓN Y CONTABILIDAD KMP
+        // ============================================================
+        composable(
+            route = "historial_facturacion/{atletaId}/{entrenadorId}",
+            arguments = listOf(
+                navArgument("atletaId") { type = NavType.StringType },
+                navArgument("entrenadorId") { type = NavType.StringType }
+            )
+        ) { backStackEntry ->
+            val atletaId = backStackEntry.arguments?.getString("atletaId") ?: ""
+            val entrenadorId = backStackEntry.arguments?.getString("entrenadorId") ?: ""
+            HistorialFacturacionScreen(
+                atletaId = atletaId,
+                entrenadorId = entrenadorId,
+                onBack = { navController.popBackStack() }
+            )
+        }
+
+        composable(
+            route = "informe_global_facturacion/{entrenadorId}",
+            arguments = listOf(navArgument("entrenadorId") { type = NavType.StringType })
+        ) { backStackEntry ->
+            val entrenadorId = backStackEntry.arguments?.getString("entrenadorId") ?: ""
+            InformeFacturacionGlobalScreen(
+                entrenadorId = entrenadorId,
+                onBack = { navController.popBackStack() }
+            )
+        }
+
+        // ============================================================
         // ➕ NUEVA RUTA: AGREGAR ATLETA (PÁGINA COMPLETA DE CREACIÓN MANUAL)
         // ============================================================
         composable(route = "agregar_atleta") {
-            // 🟢 CÓDIGO CORREGIDO: Le pasamos los repositorios creados manualmente
             val addAtletaVM: AddAtletaViewModel = viewModel {
                 AddAtletaViewModel(
                     atletaRepository = AtletaRepository(),

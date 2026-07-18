@@ -56,10 +56,21 @@ fun AtletaDetailScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(state.atleta?.nombres ?: "Detalle del Atleta", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 18.sp) },
+                title = {
+                    Text(
+                        state.atleta?.nombres ?: "Detalle del Atleta",
+                        color = Color.White,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 18.sp
+                    )
+                },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Atrás", tint = NaranjaAcento)
+                        Icon(
+                            Icons.Default.ArrowBack,
+                            contentDescription = "Atrás",
+                            tint = NaranjaAcento
+                        )
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = FondoOscuro)
@@ -77,8 +88,15 @@ fun AtletaDetailScreen(
                     CircularProgressIndicator(color = NaranjaAcento)
                 }
             } else if (state.error != null) {
-                Box(modifier = Modifier.fillMaxSize().padding(24.dp), contentAlignment = Alignment.Center) {
-                    Text(text = state.error ?: "Error desconocido", color = Color(0xFFE57373), textAlign = TextAlign.Center)
+                Box(
+                    modifier = Modifier.fillMaxSize().padding(24.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = state.error ?: "Error desconocido",
+                        color = Color(0xFFE57373),
+                        textAlign = TextAlign.Center
+                    )
                 }
             } else {
                 val atleta = state.atleta!!
@@ -93,51 +111,115 @@ fun AtletaDetailScreen(
                     verticalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
                     // 1. Ficha del Atleta
-                    Card(modifier = Modifier.fillMaxWidth(), colors = CardDefaults.cardColors(containerColor = FondoTarjeta), shape = RoundedCornerShape(16.dp)) {
-                        Row(modifier = Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
-                            Box(modifier = Modifier.size(48.dp).background(FondoOscuro, CircleShape), contentAlignment = Alignment.Center) {
-                                Icon(Icons.Default.AccountCircle, contentDescription = null, tint = NaranjaAcento, modifier = Modifier.size(32.dp))
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = CardDefaults.cardColors(containerColor = FondoTarjeta),
+                        shape = RoundedCornerShape(16.dp)
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(16.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Box(
+                                modifier = Modifier.size(48.dp)
+                                    .background(FondoOscuro, CircleShape),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    Icons.Default.AccountCircle,
+                                    contentDescription = null,
+                                    tint = NaranjaAcento,
+                                    modifier = Modifier.size(32.dp)
+                                )
                             }
                             Spacer(modifier = Modifier.width(16.dp))
                             Column(modifier = Modifier.weight(1f)) {
-                                Text("${atleta.nombres} ${atleta.apellidos}", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 17.sp)
-                                Text("Doc: ${atleta.numeroDocumento}", color = TextoSecundario, fontSize = 13.sp)
+                                Text(
+                                    "${atleta.nombres} ${atleta.apellidos}",
+                                    color = Color.White,
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 17.sp
+                                )
+                                Text(
+                                    "Doc: ${atleta.numeroDocumento}",
+                                    color = TextoSecundario,
+                                    fontSize = 13.sp
+                                )
                             }
 
-                            val colorEstado = if (atleta.estadoSuscripcion == EstadoSuscripcion.ACTIVO) Color(0xFF81C784) else Color(0xFFE57373)
-                            Surface(color = colorEstado.copy(alpha = 0.1f), shape = RoundedCornerShape(6.dp)) {
-                                Text(atleta.estadoSuscripcion.name, color = colorEstado, modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp), fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                            val colorEstado =
+                                if (atleta.estadoSuscripcion == EstadoSuscripcion.ACTIVO) Color(
+                                    0xFF81C784
+                                ) else Color(0xFFE57373)
+                            Surface(
+                                color = colorEstado.copy(alpha = 0.1f),
+                                shape = RoundedCornerShape(6.dp)
+                            ) {
+                                Text(
+                                    atleta.estadoSuscripcion.name,
+                                    color = colorEstado,
+                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                                    fontSize = 11.sp,
+                                    fontWeight = FontWeight.Bold
+                                )
                             }
                         }
                     }
 
                     // 2. 🚀 PANEL DE RENDIMIENTO Y CONTROL (CICLO ACTIVO MULTIPLATAFORMA)
-                    Card(modifier = Modifier.fillMaxWidth(), colors = CardDefaults.cardColors(containerColor = FondoTarjeta), shape = RoundedCornerShape(16.dp)) {
-                        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = CardDefaults.cardColors(containerColor = FondoTarjeta),
+                        shape = RoundedCornerShape(16.dp)
+                    ) {
+                        Column(
+                            Modifier.padding(16.dp),
+                            verticalArrangement = Arrangement.spacedBy(12.dp)
+                        ) {
                             Column {
-                                Text("Panel de Control (Ciclo Activo)", color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.Bold)
+                                Text(
+                                    "Panel de Control (Ciclo Activo)",
+                                    color = Color.White,
+                                    fontSize = 15.sp,
+                                    fontWeight = FontWeight.Bold
+                                )
 
-                                val textoFechas = if (info.fechaInicio != null && info.fechaFin != null) {
-                                    "Del ${formatearFechaHistorial(info.fechaInicio)} al ${formatearFechaHistorial(info.fechaFin)}"
-                                } else {
-                                    "Rango de ciclo operacional activo"
-                                }
-                                Text(text = textoFechas, color = NaranjaAcento, fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
+                                val textoFechas =
+                                    if (info.fechaInicio != null && info.fechaFin != null) {
+                                        "Del ${formatearFechaHistorial(info.fechaInicio)} al ${
+                                            formatearFechaHistorial(
+                                                info.fechaFin
+                                            )
+                                        }"
+                                    } else {
+                                        "Rango de ciclo operacional activo"
+                                    }
+                                Text(
+                                    text = textoFechas,
+                                    color = NaranjaAcento,
+                                    fontSize = 11.sp,
+                                    fontWeight = FontWeight.SemiBold
+                                )
                             }
 
                             Spacer(modifier = Modifier.height(4.dp))
 
-                            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
+                            Row(
+                                Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceEvenly
+                            ) {
                                 KpiCircular(
                                     valor = "${info.asistenciaPorcentaje.toInt()}%",
                                     titulo = "Asistencia",
-                                    porcentaje = (info.asistenciaPorcentaje / 100).toFloat().coerceIn(0f, 1f),
+                                    porcentaje = (info.asistenciaPorcentaje / 100).toFloat()
+                                        .coerceIn(0f, 1f),
                                     color = Color(0xFF4FC3F7)
                                 )
                                 KpiCircular(
                                     valor = "${info.cumplimientoVolumen.toInt()}%",
                                     titulo = "Vol. Meta",
-                                    porcentaje = (info.cumplimientoVolumen / 100).toFloat().coerceIn(0f, 1f),
+                                    porcentaje = (info.cumplimientoVolumen / 100).toFloat()
+                                        .coerceIn(0f, 1f),
                                     color = Color(0xFF81C784)
                                 )
 
@@ -146,19 +228,33 @@ fun AtletaDetailScreen(
                                 KpiCircular(
                                     valor = if (rpeRedondeado == 0.0) "0.0" else "$rpeRedondeado",
                                     titulo = "RPE Medio",
-                                    porcentaje = (info.rpePromedioGlobal / 10.0).toFloat().coerceIn(0f, 1f),
+                                    porcentaje = (info.rpePromedioGlobal / 10.0).toFloat()
+                                        .coerceIn(0f, 1f),
                                     color = Color(0xFFFFB74D)
                                 )
                             }
 
                             if (info.rpePromedioPorEjercicio.isNotEmpty()) {
                                 HorizontalDivider(color = FondoOscuro.copy(alpha = 0.5f))
-                                Text("Top Exigencia Neuromuscular (Mayor RPE)", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                                Text(
+                                    "Top Exigencia Neuromuscular (Mayor RPE)",
+                                    color = Color.White,
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.Bold
+                                )
                                 info.rpePromedioPorEjercicio.forEach { (nombre, rpe) ->
                                     val rpeEjRedondeado = ((rpe * 10).toInt() / 10.0)
-                                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                                    Row(
+                                        Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.SpaceBetween
+                                    ) {
                                         Text("• $nombre", color = TextoSecundario, fontSize = 12.sp)
-                                        Text("RPE $rpeEjRedondeado", color = Color(0xFFFF7043), fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                                        Text(
+                                            "RPE $rpeEjRedondeado",
+                                            color = Color(0xFFFF7043),
+                                            fontSize = 12.sp,
+                                            fontWeight = FontWeight.Bold
+                                        )
                                     }
                                 }
                             }
@@ -166,38 +262,103 @@ fun AtletaDetailScreen(
                     }
 
                     // 3. Cuadrícula de Accesos Rápidos
-                    Text("Expediente General", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 15.sp)
+                    Text(
+                        "Expediente General",
+                        color = Color.White,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 15.sp
+                    )
 
                     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
-                            MenuButton(Modifier.weight(1f), "Valoración", Icons.Default.Assessment) { onNavigateToHistorialValoraciones(atletaId) }
-                            MenuButton(Modifier.weight(1f), "Hábitos", Icons.Default.MenuBook) { onNavigateToHistorialHabitos(atletaId) }
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            MenuButton(
+                                Modifier.weight(1f),
+                                "Valoración",
+                                Icons.Default.Assessment
+                            ) { onNavigateToHistorialValoraciones(atletaId) }
+                            MenuButton(
+                                Modifier.weight(1f),
+                                "Hábitos",
+                                Icons.Default.MenuBook
+                            ) { onNavigateToHistorialHabitos(atletaId) }
                         }
-                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
-                            MenuButton(Modifier.weight(1f), "Perfil", Icons.Default.AccountCircle) { onNavigateToPerfil(atletaId) }
-                            MenuButton(Modifier.weight(1f), "Diario Cargas", Icons.Default.FitnessCenter) { onNavigateToRendimiento(atletaId) }
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            MenuButton(
+                                Modifier.weight(1f),
+                                "Perfil",
+                                Icons.Default.AccountCircle
+                            ) { onNavigateToPerfil(atletaId) }
+                            MenuButton(
+                                Modifier.weight(1f),
+                                "Diario Cargas",
+                                Icons.Default.FitnessCenter
+                            ) { onNavigateToRendimiento(atletaId) }
                         }
                     }
 
                     // 4. 🚀 COMENTARIOS VIVOS DEL TRABAJO DEL ALUMNO
                     if (state.notasRecientes.isNotEmpty()) {
-                        HorizontalDivider(color = FondoTarjeta, modifier = Modifier.padding(vertical = 4.dp))
-                        Text("Últimos Comentarios del Atleta", fontWeight = FontWeight.Bold, color = NaranjaAcento, fontSize = 15.sp)
+                        HorizontalDivider(
+                            color = FondoTarjeta,
+                            modifier = Modifier.padding(vertical = 4.dp)
+                        )
+                        Text(
+                            "Últimos Comentarios del Atleta",
+                            fontWeight = FontWeight.Bold,
+                            color = NaranjaAcento,
+                            fontSize = 15.sp
+                        )
 
                         Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                             state.notasRecientes.forEach { nota ->
                                 Card(
                                     modifier = Modifier.fillMaxWidth(),
-                                    colors = CardDefaults.cardColors(containerColor = Color(0xFF421D24)),
-                                    border = androidx.compose.foundation.BorderStroke(1.dp, Color.Red.copy(alpha = 0.2f))
+                                    colors = CardDefaults.cardColors(
+                                        containerColor = Color(
+                                            0xFF421D24
+                                        )
+                                    ),
+                                    border = androidx.compose.foundation.BorderStroke(
+                                        1.dp,
+                                        Color.Red.copy(alpha = 0.2f)
+                                    )
                                 ) {
-                                    Row(modifier = Modifier.padding(12.dp), verticalAlignment = Alignment.Top) {
-                                        Icon(imageVector = Icons.Default.NewReleases, contentDescription = "Feedback", tint = Color(0xFFE57373), modifier = Modifier.padding(top = 2.dp).size(18.dp))
+                                    Row(
+                                        modifier = Modifier.padding(12.dp),
+                                        verticalAlignment = Alignment.Top
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.NewReleases,
+                                            contentDescription = "Feedback",
+                                            tint = Color(0xFFE57373),
+                                            modifier = Modifier.padding(top = 2.dp).size(18.dp)
+                                        )
                                         Spacer(Modifier.width(8.dp))
                                         Column {
-                                            Text(text = "En: ${nota.ejercicioNombre} (${nota.rutinaNombre})", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = Color.White)
-                                            Text(text = "\"${nota.mensaje}\"", fontSize = 13.sp, fontStyle = FontStyle.Italic, color = Color.White.copy(alpha = 0.9f))
-                                            Text(text = formatearFechaHistorial(nota.fecha), fontSize = 10.sp, color = TextoSecundario, modifier = Modifier.padding(top = 4.dp))
+                                            Text(
+                                                text = "En: ${nota.ejercicioNombre} (${nota.rutinaNombre})",
+                                                fontSize = 12.sp,
+                                                fontWeight = FontWeight.Bold,
+                                                color = Color.White
+                                            )
+                                            Text(
+                                                text = "\"${nota.mensaje}\"",
+                                                fontSize = 13.sp,
+                                                fontStyle = FontStyle.Italic,
+                                                color = Color.White.copy(alpha = 0.9f)
+                                            )
+                                            Text(
+                                                text = formatearFechaHistorial(nota.fecha),
+                                                fontSize = 10.sp,
+                                                color = TextoSecundario,
+                                                modifier = Modifier.padding(top = 4.dp)
+                                            )
                                         }
                                     }
                                 }
@@ -206,38 +367,88 @@ fun AtletaDetailScreen(
                     }
 
                     // 5. SECCIÓN DE PROGRAMACIÓN DE RÚTINAS
-                    HorizontalDivider(color = FondoTarjeta, modifier = Modifier.padding(vertical = 4.dp))
+                    HorizontalDivider(
+                        color = FondoTarjeta,
+                        modifier = Modifier.padding(vertical = 4.dp)
+                    )
 
-                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                        Text("Programa de Entrenamiento Activo", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 15.sp)
-                        TextButton(onClick = { onNavigateToSeleccionarPlantilla(atletaId, atleta.entrenadorId ?: "") }, colors = ButtonDefaults.textButtonColors(contentColor = NaranjaAcento)) {
-                            Icon(imageVector = Icons.Default.Add, contentDescription = null, modifier = Modifier.size(16.dp))
+                    Row(
+                        Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            "Programa de Entrenamiento Activo",
+                            color = Color.White,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 15.sp
+                        )
+                        TextButton(onClick = {
+                            onNavigateToSeleccionarPlantilla(
+                                atletaId,
+                                atleta.entrenadorId ?: ""
+                            )
+                        }, colors = ButtonDefaults.textButtonColors(contentColor = NaranjaAcento)) {
+                            Icon(
+                                imageVector = Icons.Default.Add,
+                                contentDescription = null,
+                                modifier = Modifier.size(16.dp)
+                            )
                             Spacer(Modifier.width(4.dp))
                             Text("Asignar", fontWeight = FontWeight.Bold, fontSize = 13.sp)
                         }
                     }
 
                     if (rutina != null) {
+                        // 🟢 TARJETA DE MATERIAL 3 OPTIMIZADA: Usamos la sobrecarga nativa de onClick para ripples perfectos
                         Card(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clickable { onNavigateToEditRutina(atletaId, rutina.id) },
+                            onClick = { onNavigateToEditRutina(atletaId, rutina.id) },
+                            modifier = Modifier.fillMaxWidth(),
                             shape = RoundedCornerShape(16.dp),
-                            colors = CardDefaults.cardColors(containerColor = NaranjaAcento.copy(alpha = 0.08f)),
-                            border = androidx.compose.foundation.BorderStroke(1.dp, NaranjaAcento.copy(alpha = 0.25f))
+                            colors = CardDefaults.cardColors(
+                                containerColor = NaranjaAcento.copy(
+                                    alpha = 0.08f
+                                )
+                            ),
+                            border = androidx.compose.foundation.BorderStroke(
+                                1.dp,
+                                NaranjaAcento.copy(alpha = 0.25f)
+                            )
                         ) {
                             Column(modifier = Modifier.padding(16.dp)) {
-                                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
                                     Column(modifier = Modifier.weight(1f)) {
-                                        Text(text = rutina.nombreRutina, fontWeight = FontWeight.Black, color = Color.White, fontSize = 18.sp)
-                                        Text(text = "Asignado: ${formatearFechaHistorial(rutina.fechaAsignacion)}", color = TextoSecundario, fontSize = 12.sp)
+                                        Text(
+                                            text = rutina.nombreRutina,
+                                            fontWeight = FontWeight.Black,
+                                            color = Color.White,
+                                            fontSize = 18.sp
+                                        )
+                                        Text(
+                                            text = "Asignado: ${formatearFechaHistorial(rutina.fechaAsignacion)}",
+                                            color = TextoSecundario,
+                                            fontSize = 12.sp
+                                        )
                                     }
-                                    Icon(Icons.Default.ChevronRight, contentDescription = "Editar", tint = NaranjaAcento, modifier = Modifier.size(24.dp))
+                                    Icon(
+                                        Icons.Default.ChevronRight,
+                                        contentDescription = "Editar",
+                                        tint = NaranjaAcento,
+                                        modifier = Modifier.size(24.dp)
+                                    )
                                 }
                             }
                         }
                     } else {
-                        Text("Este atleta no registra rutinas activas en la macroetapa.", color = TextoSecundario, fontSize = 13.sp)
+                        Text(
+                            "Este atleta no registra rutinas activas en la macroetapa.",
+                            color = TextoSecundario,
+                            fontSize = 13.sp
+                        )
                     }
                 }
             }

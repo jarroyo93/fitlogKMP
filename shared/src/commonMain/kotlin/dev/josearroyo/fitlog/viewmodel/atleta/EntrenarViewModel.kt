@@ -13,6 +13,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlin.uuid.Uuid
 
 data class EntrenarState(
     val isLoading: Boolean = true,
@@ -167,18 +168,35 @@ class EntrenarViewModel : ViewModel() {
 
     fun terminarEntrenamiento(authUid: String) {
         val currentState = _state.value
-        val rutinaActual = currentState.rutina ?: return
-        val diaActual = currentState.diaActual ?: return
+        val rutinaActual = currentState.rutina
+        val diaActual = currentState.diaActual
+
+        // 1. CORRECCIÓN: En lugar de salir en silencio, notificamos a la UI si falta contexto
+        if (rutinaActual == null || diaActual == null) {
+            _state.update {
+                it.copy(
+                    isLoading = false,
+                    error = "No se puede guardar: Error interno con los datos de la rutina."
+                )
+            }
+            return
+        }
 
         val contieneMensajesNuevos = currentState.sesionEnProgreso.ejerciciosRealizados.any { it.notasAtleta.isNotBlank() }
-
-        val sesionFinal = currentState.sesionEnProgreso
-            .copy(fechaEjecucion = getCurrentTimeMillis())
-            .calcularMetricas()
+        val nuevoIdSesion = Uuid.random().toString()
 
         viewModelScope.launch {
             _state.update { it.copy(isLoading = true, error = null) }
-            try { // 🟢 Bloque try-catch para salvar la UI si falla la sincronización final
+            try {
+                // 2. CORRECCIÓN: Trasladamos el cálculo de métricas DENTRO del entorno seguro try-catch
+                // Aquí aseguramos que el cálculo global se ejecute sin tumbar la aplicación
+                val sesionFinal = currentState.sesionEnProgreso
+                    .copy(
+                        id = nuevoIdSesion,
+                        fechaEjecucion = getCurrentTimeMillis()
+                    )
+                    .calcularMetricas() // 🚀 Extensión segura de repeticiones globales
+
                 val usuario = userRepository.obtenerUsuario(authUid)
 
                 if (usuario != null) {
@@ -207,8 +225,13 @@ class EntrenarViewModel : ViewModel() {
                     _state.update { it.copy(isLoading = false, error = "Usuario no encontrado.") }
                 }
             } catch (e: Exception) {
-                // Si la red se cae, la pantalla se desbloquea y muestra el error de forma segura
-                _state.update { it.copy(isLoading = false, error = e.message ?: "Fallo de conexión al guardar el entrenamiento") }
+                // Cualquier división por cero o fallo de red caerá aquí de manera segura, liberando la UI
+                _state.update {
+                    it.copy(
+                        isLoading = false,
+                        error = e.message ?: "Fallo inesperado al procesar y guardar el entrenamiento."
+                    )
+                }
             }
         }
     }

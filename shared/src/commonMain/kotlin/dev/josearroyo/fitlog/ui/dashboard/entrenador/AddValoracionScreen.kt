@@ -12,6 +12,7 @@ import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -169,17 +170,22 @@ fun AddValoracionScreen(
                                 }
                             }
 
-                            when (state.valoracion.metodoComposicion) {
-                                MetodoComposicionCorporal.ANTROPOMETRIA -> SubFormularioAntropometria(state.valoracion, viewModel)
-                                MetodoComposicionCorporal.BIOIMPEDANCIA -> SubFormularioBioimpedancia(state.valoracion, viewModel)
-                                MetodoComposicionCorporal.AMBOS -> {
-                                    SubFormularioAntropometria(state.valoracion, viewModel)
-                                    HorizontalDivider(color = FondoOscuro, modifier = Modifier.padding(vertical = 8.dp))
-                                    SubFormularioBioimpedancia(state.valoracion, viewModel)
+                            // Envolturas de clave explícitas para asegurar que la reconfiguración de subformularios mantenga los árboles limpios
+                            key(state.valoracion.metodoComposicion) {
+                                when (state.valoracion.metodoComposicion) {
+                                    MetodoComposicionCorporal.ANTROPOMETRIA -> SubFormularioAntropometria(state.valoracion, viewModel)
+                                    MetodoComposicionCorporal.BIOIMPEDANCIA -> SubFormularioBioimpedancia(state.valoracion, viewModel)
+                                    MetodoComposicionCorporal.AMBOS -> {
+                                        Column {
+                                            SubFormularioAntropometria(state.valoracion, viewModel)
+                                            HorizontalDivider(color = FondoOscuro, modifier = Modifier.padding(vertical = 16.dp))
+                                            SubFormularioBioimpedancia(state.valoracion, viewModel)
+                                        }
+                                    }
                                 }
                             }
 
-                            HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp), color = FondoOscuro)
+                            HorizontalDivider(color = FondoOscuro, modifier = Modifier.padding(vertical = 4.dp))
                             Text("Registro Fotográfico", color = Color.White, style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold)
                             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
                                 OutlinedButton(onClick = {}, colors = ButtonDefaults.outlinedButtonColors(contentColor = NaranjaAcento)) {
@@ -261,12 +267,13 @@ fun SubFormularioBioimpedancia(valFisica: ValoracionFisica, viewModel: AddValora
     }
 }
 
+// 🟢 CORREGIDO: Los inputs de abajo se modificaron para que lean sincrónicamente el valor mutado y no causen pérdida de foco del teclado en cada pulsación
 @Composable
 fun CampoMedidaBase(label: String, value: Double, onValueChange: (Double) -> Unit, modifier: Modifier = Modifier) {
-    var textValue by remember { mutableStateOf(if (value == 0.0) "" else value.toString()) }
+    val textValue = if (value == 0.0) "" else value.toString()
     OutlinedTextField(
         value = textValue,
-        onValueChange = { textValue = it; onValueChange(it.replace(",", ".").toDoubleOrNull() ?: 0.0) },
+        onValueChange = { onValueChange(it.replace(",", ".").toDoubleOrNull() ?: 0.0) },
         label = { Text(label, color = TextoSecundario) },
         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
         modifier = modifier,
@@ -277,10 +284,10 @@ fun CampoMedidaBase(label: String, value: Double, onValueChange: (Double) -> Uni
 
 @Composable
 fun CampoMedidaOpcional(label: String, value: Double?, onValueChange: (Double?) -> Unit, modifier: Modifier = Modifier) {
-    var textValue by remember { mutableStateOf(value?.toString() ?: "") }
+    val textValue = value?.toString() ?: ""
     OutlinedTextField(
         value = textValue,
-        onValueChange = { textValue = it; onValueChange(it.replace(",", ".").toDoubleOrNull()) },
+        onValueChange = { onValueChange(it.replace(",", ".").toDoubleOrNull()) },
         label = { Text(label, color = TextoSecundario) },
         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
         modifier = modifier,
@@ -291,10 +298,10 @@ fun CampoMedidaOpcional(label: String, value: Double?, onValueChange: (Double?) 
 
 @Composable
 fun CampoEnteroOpcional(label: String, value: Int?, onValueChange: (Int?) -> Unit, modifier: Modifier = Modifier) {
-    var textValue by remember { mutableStateOf(value?.toString() ?: "") }
+    val textValue = value?.toString() ?: ""
     OutlinedTextField(
         value = textValue,
-        onValueChange = { val limpio = it.filter { c -> c.isDigit() }; textValue = limpio; onValueChange(limpio.toIntOrNull()) },
+        onValueChange = { onValueChange(it.filter { c -> c.isDigit() }.toIntOrNull()) },
         label = { Text(label, color = TextoSecundario) },
         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
         modifier = modifier,

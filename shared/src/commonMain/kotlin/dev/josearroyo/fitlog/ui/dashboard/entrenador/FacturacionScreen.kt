@@ -14,6 +14,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -27,10 +28,11 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import dev.josearroyo.fitlog.data.model.EstadoSuscripcion
 import dev.josearroyo.fitlog.data.model.TipoPlanSuscripcion
 import dev.josearroyo.fitlog.data.model.Usuario
-import dev.josearroyo.fitlog.formatearFechaHistorial // API Expect nativa
-import dev.josearroyo.fitlog.getCurrentTimeMillis      // API Expect nativa
+import dev.josearroyo.fitlog.formatearFechaHistorial
+import dev.josearroyo.fitlog.getCurrentTimeMillis
 import dev.josearroyo.fitlog.viewmodel.FacturacionViewModel
 import dev.josearroyo.fitlog.viewmodel.FiltroFacturacion
+
 
 private val FondoOscuro = Color(0xFF241B3C)
 private val NaranjaAcento = Color(0xFFFF9F6D)
@@ -47,8 +49,9 @@ fun FacturacionScreen(
 ) {
     val state by viewModel.state.collectAsState()
 
-    var atletaSeleccionadoParaRenovar by remember { mutableStateOf<Usuario?>(null) }
-    var atletaSeleccionadoParaPausar by remember { mutableStateOf<Usuario?>(null) }
+    // 🟢 CORREGIDO: rememberSaveable para evitar cierre de diálogos al rotar/recomponer
+    var atletaSeleccionadoParaRenovar by rememberSaveable { mutableStateOf<Usuario?>(null) }
+    var atletaSeleccionadoParaPausar by rememberSaveable { mutableStateOf<Usuario?>(null) }
 
     LaunchedEffect(entrenadorId) {
         viewModel.cargarAtletas(entrenadorId)
@@ -57,51 +60,31 @@ fun FacturacionScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = {
-                    Text(
-                        text = "Facturación & Suscripciones",
-                        fontWeight = FontWeight.Bold,
-                        color = Color.White,
-                        fontSize = 20.sp
-                    )
-                },
+                title = { Text("Facturación & Suscripciones", fontWeight = FontWeight.Bold, color = Color.White, fontSize = 20.sp) },
                 actions = {
                     IconButton(onClick = onNavigateToInformeGlobal) {
-                        Icon(
-                            imageVector = Icons.Default.ReceiptLong,
-                            contentDescription = "Reporte de ingresos general",
-                            tint = NaranjaAcento
-                        )
+                        Icon(Icons.Default.ReceiptLong, contentDescription = "Reporte general", tint = NaranjaAcento)
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = FondoOscuro)
             )
         }
     ) { paddingValues ->
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(FondoOscuro)
-                .padding(paddingValues)
-        ) {
+        Box(modifier = Modifier.fillMaxSize().background(FondoOscuro).padding(paddingValues)) {
             Column(modifier = Modifier.fillMaxSize()) {
 
-                // 📊 RESUMEN RÁPIDO DE SUSCRIPCIONES
                 EstadisticasRapidas(atletas = state.atletas)
 
-                // 🔍 BARRA DE BÚSQUEDA
                 OutlinedTextField(
                     value = state.searchQuery,
                     onValueChange = { viewModel.onSearchQueryChanged(it) },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 8.dp),
-                    placeholder = { Text("Buscar atleta por nombre o correo...", color = TextoSecundario) },
-                    leadingIcon = { Icon(Icons.Default.Search, contentDescription = null, tint = TextoSecundario) },
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
+                    placeholder = { Text("Buscar atleta...", color = TextoSecundario) },
+                    leadingIcon = { Icon(Icons.Default.Search, null, tint = TextoSecundario) },
                     trailingIcon = {
                         if (state.searchQuery.isNotEmpty()) {
                             IconButton(onClick = { viewModel.onSearchQueryChanged("") }) {
-                                Icon(Icons.Default.Clear, contentDescription = "Limpiar filtro", tint = TextoSecundario)
+                                Icon(Icons.Default.Clear, null, tint = TextoSecundario)
                             }
                         }
                     },
@@ -117,14 +100,9 @@ fun FacturacionScreen(
                     singleLine = true
                 )
 
-                // 🎛️ FILTROS HORIZONTALES (CHIPS)
-                LazyRow(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 8.dp),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    items(FiltroFacturacion.values()) { filtro ->
+                LazyRow(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    // 🟢 CORREGIDO: Uso de .entries en lugar de .values()
+                    items(FiltroFacturacion.entries) { filtro ->
                         val esSeleccionado = state.filtroActual == filtro
                         FilterChip(
                             selected = esSeleccionado,
@@ -136,38 +114,23 @@ fun FacturacionScreen(
                                 containerColor = FondoTarjeta,
                                 labelColor = TextoSecundario
                             ),
-                            border = FilterChipDefaults.filterChipBorder(
-                                enabled = true,
-                                selected = esSeleccionado,
-                                borderColor = if (esSeleccionado) NaranjaAcento else Color.Transparent,
-                                selectedBorderColor = NaranjaAcento,
-                                borderWidth = 1.dp
-                            ),
                             shape = RoundedCornerShape(8.dp)
                         )
                     }
                 }
 
-                // 👥 LISTADO DE ATLETAS
                 if (state.isLoading) {
                     Box(modifier = Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
                         CircularProgressIndicator(color = NaranjaAcento)
                     }
                 } else if (state.atletasFiltrados.isEmpty()) {
                     Box(modifier = Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
-                        Text(
-                            text = "No se encontraron atletas en esta categoría.",
-                            color = TextoSecundario,
-                            textAlign = TextAlign.Center
-                        )
+                        Text("No se encontraron atletas.", color = TextoSecundario, textAlign = TextAlign.Center)
                     }
                 } else {
-                    LazyColumn(
-                        modifier = Modifier.weight(1f),
-                        contentPadding = PaddingValues(16.dp),
-                        verticalArrangement = Arrangement.spacedBy(12.dp)
-                    ) {
-                        items(state.atletasFiltrados) { atleta ->
+                    LazyColumn(modifier = Modifier.weight(1f), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                        // 🟢 CORREGIDO: Key estable para optimizar la lista
+                        items(items = state.atletasFiltrados, key = { it.id }) { atleta ->
                             AtletaFacturacionItem(
                                 atleta = atleta,
                                 onHistory = { onNavigateToHistorial(atleta.id) },
@@ -180,23 +143,12 @@ fun FacturacionScreen(
                 }
             }
 
-            // ============================================================
-            // DIÁLOGOS DE CONTROL MODAL
-            // ============================================================
-
             atletaSeleccionadoParaRenovar?.let { atleta ->
                 DialogoRenovacion(
                     atletaNombre = "${atleta.nombres} ${atleta.apellidos}",
                     onDismiss = { atletaSeleccionadoParaRenovar = null },
                     onConfirm = { plan, dias, enseguida, inicioMilis ->
-                        viewModel.renovarAtleta(
-                            atletaId = atleta.id,
-                            entrenadorId = entrenadorId,
-                            tipoPlan = plan,
-                            diasPersonalizados = dias,
-                            iniciarEnseguida = enseguida,
-                            fechaInicioSeleccionada = inicioMilis
-                        )
+                        viewModel.renovarAtleta(atleta.id, entrenadorId, plan, dias, enseguida, inicioMilis)
                         atletaSeleccionadoParaRenovar = null
                     }
                 )
@@ -418,6 +370,16 @@ fun AtletaFacturacionItem(
 // ============================================================
 // MODAL DE CONFIGURACIÓN DE RENOVACIÓN DE PLAN (REFACTORIZADO)
 // ============================================================
+// 1. Definimos la lista fuera del Composable para no recrearla en cada frame
+private val Offsets = listOf(
+    0 to "Hoy",
+    1 to "Mañana",
+    2 to "+2 días",
+    7 to "+1 semana",
+    15 to "+15 días",
+    30 to "+1 mes"
+)
+
 @Composable
 fun DialogoRenovacion(
     atletaNombre: String,
@@ -427,7 +389,6 @@ fun DialogoRenovacion(
     var planSeleccionado by remember { mutableStateOf(TipoPlanSuscripcion.MENSUAL) }
     var diasPersonalizadosInput by remember { mutableStateOf("30") }
     var iniciarEnseguida by remember { mutableStateOf(true) }
-
     var diasOffsetSeleccionado by remember { mutableStateOf(0) }
 
     val ahora = getCurrentTimeMillis()
@@ -459,7 +420,8 @@ fun DialogoRenovacion(
                 Text("Selecciona el tipo de plan:", color = TextoSecundario, fontSize = 12.sp)
 
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    TipoPlanSuscripcion.values().forEach { plan ->
+                    // 🟢 CORRECCIÓN: Uso de .entries en lugar de .values() para mejor rendimiento
+                    TipoPlanSuscripcion.entries.forEach { plan ->
                         val esPlanActual = planSeleccionado == plan
                         Row(
                             modifier = Modifier
@@ -518,11 +480,7 @@ fun DialogoRenovacion(
                 ) {
                     Column {
                         Text("Iniciar inmediatamente", color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.Medium)
-                        Text(
-                            text = "Cola inteligente o vigencia inmediata",
-                            color = TextoSecundario,
-                            fontSize = 11.sp
-                        )
+                        Text("Cola inteligente o vigencia inmediata", color = TextoSecundario, fontSize = 11.sp)
                     }
                     Switch(
                         checked = iniciarEnseguida,
@@ -536,15 +494,8 @@ fun DialogoRenovacion(
                         Text("Configurar fecha diferida de activación:", color = TextoSecundario, fontSize = 12.sp)
 
                         LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            val offsets = listOf(
-                                0 to "Hoy",
-                                1 to "Mañana",
-                                2 to "+2 días",
-                                7 to "+1 semana",
-                                15 to "+15 días",
-                                30 to "+1 mes"
-                            )
-                            items(offsets) { (dias, label) ->
+                            // 🟢 CORRECCIÓN: Usamos la constante definida arriba para evitar re-creación
+                            items(Offsets) { (dias, label) ->
                                 val esOffsetActual = diasOffsetSeleccionado == dias
                                 Box(
                                     modifier = Modifier
@@ -580,12 +531,7 @@ fun DialogoRenovacion(
             Button(
                 onClick = {
                     val diasPersonalizados = diasPersonalizadosInput.toIntOrNull() ?: 30
-                    onConfirm(
-                        planSeleccionado,
-                        diasPersonalizados,
-                        iniciarEnseguida,
-                        fechaInicioCalculada
-                    )
+                    onConfirm(planSeleccionado, diasPersonalizados, iniciarEnseguida, fechaInicioCalculada)
                 },
                 colors = ButtonDefaults.buttonColors(containerColor = NaranjaAcento, contentColor = FondoOscuro),
                 shape = RoundedCornerShape(8.dp)
@@ -593,7 +539,6 @@ fun DialogoRenovacion(
                 Text("Confirmar Venta", fontWeight = FontWeight.Bold)
             }
         },
-        // 🚀 SE ELIMINÓ EL PARÁMETRO bottomButton QUE CAUSABA EL CONFLICTO DE SOBRECARGA
         dismissButton = {
             TextButton(onClick = onDismiss, colors = ButtonDefaults.textButtonColors(contentColor = TextoSecundario)) {
                 Text("Cancelar")
@@ -605,13 +550,15 @@ fun DialogoRenovacion(
 // ============================================================
 // MODAL DE PAUSA MANUAL DE SUSCRIPCIÓN
 // ============================================================
+
 @Composable
 fun DialogoPausar(
     atletaNombre: String,
     onDismiss: () -> Unit,
     onConfirm: (String) -> Unit
 ) {
-    var motivoInput by remember { mutableStateOf("") }
+    // 🟢 CORREGIDO: Usar rememberSaveable para persistir el texto ante cambios de configuración
+    var motivoInput by rememberSaveable { mutableStateOf("") }
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -646,7 +593,7 @@ fun DialogoPausar(
                     label = { Text("Motivo de la pausa", color = TextoSecundario) },
                     placeholder = { Text("Ej: Lesión médica, vacaciones...", color = TextoSecundario.copy(alpha = 0.5f)) },
                     colors = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = Color(0xFFFFB74D),
+                        focusedBorderColor = Color(0xFFFFB74D), // Manteniendo tu color naranja/amarillo de advertencia
                         unfocusedBorderColor = FondoOscuro,
                         focusedTextColor = Color.White,
                         unfocusedTextColor = Color.White
@@ -658,7 +605,10 @@ fun DialogoPausar(
         },
         confirmButton = {
             Button(
-                onClick = { onConfirm(motivoInput.trim().ifEmpty { "Pausa solicitada por el entrenador" }) },
+                onClick = {
+                    // Limpieza del texto antes de enviar
+                    onConfirm(motivoInput.trim().ifEmpty { "Pausa solicitada por el entrenador" })
+                },
                 colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFFB74D), contentColor = FondoOscuro),
                 shape = RoundedCornerShape(8.dp)
             ) {
@@ -666,7 +616,10 @@ fun DialogoPausar(
             }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss, colors = ButtonDefaults.textButtonColors(contentColor = TextoSecundario)) {
+            TextButton(
+                onClick = onDismiss,
+                colors = ButtonDefaults.textButtonColors(contentColor = TextoSecundario)
+            ) {
                 Text("Cancelar")
             }
         }

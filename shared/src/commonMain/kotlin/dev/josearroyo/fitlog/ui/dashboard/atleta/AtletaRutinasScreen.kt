@@ -37,7 +37,8 @@ fun AtletaRutinasScreen(
     uid: String,
     onNavigateToEntrenar: (String) -> Unit
 ) {
-    val viewModel: AtletaRutinasViewModel = viewModel()
+    // 🟢 CORREGIDO: Inicialización explícita compatible con la arquitectura DI KMP
+    val viewModel: AtletaRutinasViewModel = viewModel { AtletaRutinasViewModel() }
     val state by viewModel.state.collectAsState()
 
     LaunchedEffect(uid) {
@@ -140,7 +141,6 @@ fun RutinaExpandableCard(rutina: RutinaAsignada, onComenzar: () -> Unit) {
                         }
                     }
 
-                    // 🟢 Reemplazado SimpleDateFormat nativo de Java por tu expect/actual KMP
                     val fechaFormateada = rutina.ultimaVezEjecutada?.let {
                         formatearFechaHora(it)
                     } ?: "Nunca"
@@ -173,14 +173,21 @@ fun IndicadorFrecuencia(ultimaVez: Long?) {
         return
     }
 
-    // 🟢 Cálculo matemático limpio con marcas de tiempo Long en lugar de clases de Java
-    val diffMilis = getCurrentTimeMillis() - ultimaVez
-    val diffDias = diffMilis / (1000 * 60 * 60 * 24)
-    val esActivo = diffDias < 2
+    // 🟢 CORREGIDO: El cálculo matemático ahora se recuerda para evitar ejecuciones repetitivas en cada frame
+    val esActivo = remember(ultimaVez) {
+        val diffMilis = getCurrentTimeMillis() - ultimaVez
+        val diffDias = diffMilis / (1000 * 60 * 60 * 24)
+        diffDias < 2
+    }
+
+    val diffDiasTexto = remember(ultimaVez) {
+        val diffMilis = getCurrentTimeMillis() - ultimaVez
+        diffMilis / (1000 * 60 * 60 * 24)
+    }
 
     val containerColor = if (esActivo) NaranjaAcento else FondoOscuro
     val contentColor = if (esActivo) FondoOscuro else TextoSecundario
-    val texto = if (esActivo) "Activo" else "Hace $diffDias días"
+    val texto = if (esActivo) "Activo" else "Hace $diffDiasTexto días"
 
     Surface(shape = MaterialTheme.shapes.small, color = containerColor, modifier = Modifier.padding(vertical = 2.dp)) {
         Text(text = texto, color = contentColor, style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold, modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp))

@@ -38,7 +38,8 @@ fun AtletaInicioScreen(
     uid: String,
     onNavigateToEntrenar: (String) -> Unit
 ) {
-    val viewModel: AtletaInicioViewModel = viewModel()
+
+    val viewModel: AtletaInicioViewModel = viewModel { AtletaInicioViewModel() }
     val state by viewModel.state.collectAsState()
 
     var mostrarModalPeso by remember { mutableStateOf(false) }
@@ -59,7 +60,11 @@ fun AtletaInicioScreen(
     if (mostrarModalPeso) {
         AlertDialog(
             containerColor = FondoTarjeta,
-            onDismissRequest = { mostrarModalPeso = false },
+            onDismissRequest = {
+                mostrarModalPeso = false
+                inputPeso = ""  // 🟢 Limpieza preventiva al cerrar por fuera
+                inputNotas = ""
+            },
             title = { Text("Registrar Nuevo Peso", color = Color.White, fontWeight = FontWeight.Bold) },
             text = {
                 Column(modifier = Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(16.dp)) {
@@ -113,7 +118,11 @@ fun AtletaInicioScreen(
                 }
             },
             dismissButton = {
-                TextButton(onClick = { mostrarModalPeso = false }) {
+                TextButton(onClick = {
+                    mostrarModalPeso = false
+                    inputPeso = ""  // 🟢 CORREGIDO: Resetea el buffer temporal al cancelar
+                    inputNotas = ""
+                }) {
                     Text("Cancelar", color = NaranjaAcento)
                 }
             }

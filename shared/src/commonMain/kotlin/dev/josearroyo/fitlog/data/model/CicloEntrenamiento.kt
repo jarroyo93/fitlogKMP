@@ -9,9 +9,12 @@ data class CicloEntrenamiento(
     val atletaId: String = "",
     val rutinaAsignadaId: String = "",
 
-    // --- CONTROL DE TIEMPO (Cambiado a Long para ser Multiplataforma) ---
-    val fechaInicio: Long = 0L,  // Timestamp en milisegundos (Ej: 1718023200000)
-    val fechaCierre: Long = 0L,  // Lo manejas sumándole los milisegundos de 7 días
+    @Serializable(with = TimestampLongSerializer::class)
+    val fechaInicio: Long = 0L,
+
+    // 🟢 CORRECCIÓN CRÍTICA: Hacemos lo mismo con la fecha de finalización
+    @Serializable(with = TimestampLongSerializer::class)
+    val fechaCierre: Long = 0L,
     val estaActivo: Boolean = true,
 
     // --- MÉTRICA 1: ASISTENCIA ---

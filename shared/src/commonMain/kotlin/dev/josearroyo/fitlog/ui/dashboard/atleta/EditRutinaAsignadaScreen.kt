@@ -70,7 +70,6 @@ fun EditRutinaAsignadaScreen(atletaId: String, rutinaId: String, onBack: () -> U
         )
     }
 
-    // --- MODAL: AGREGAR EJERCICIO A UN DÍA ---
     if (showBottomSheetEjercicios) {
         var searchQuery by remember { mutableStateOf("") }
         val ejerciciosFiltrados = state.bibliotecaEjercicios.filter { it.nombre.contains(searchQuery, ignoreCase = true) }
@@ -98,7 +97,6 @@ fun EditRutinaAsignadaScreen(atletaId: String, rutinaId: String, onBack: () -> U
         }
     }
 
-    // --- MODAL: AGREGAR DÍA COMPLETO DESDE PLANTILLA ---
     if (showBottomSheetPlantillas) {
         ModalBottomSheet(onDismissRequest = { showBottomSheetPlantillas = false }, sheetState = sheetState, containerColor = FondoTarjeta) {
             Column(modifier = Modifier.fillMaxWidth().padding(16.dp).padding(bottom = 32.dp)) {
@@ -154,111 +152,119 @@ fun EditRutinaAsignadaScreen(atletaId: String, rutinaId: String, onBack: () -> U
 
                 val diasOrdenados = rutina.diasEntrenamiento.sortedBy { it.ordenSecuencia }
 
-                diasOrdenados.forEachIndexed { diaIndex, dia ->
-                    Card(modifier = Modifier.fillMaxWidth(), colors = CardDefaults.cardColors(containerColor = FondoTarjeta), shape = RoundedCornerShape(16.dp)) {
-                        Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                diasOrdenados.forEachIndexed { visualDiaIndex, dia ->
+                    // 🟢 CORREGIDO: Buscamos el índice real del día en la colección desordenada para no mutar el objeto equivocado
+                    val realDiaIndex = remember(rutina.diasEntrenamiento, dia) {
+                        rutina.diasEntrenamiento.indexOf(dia)
+                    }
 
-                            // 🚀 INTERFAZ CORREGIDA: Vinculación con moverDia(diaIndex, direccion)
-                            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
-                                Text("Día ${dia.ordenSecuencia}: ${dia.nombreDia}", fontWeight = FontWeight.Black, color = NaranjaAcento, fontSize = 16.sp, modifier = Modifier.weight(1f))
+                    key(dia.ordenSecuencia) {
+                        Card(modifier = Modifier.fillMaxWidth(), colors = CardDefaults.cardColors(containerColor = FondoTarjeta), shape = RoundedCornerShape(16.dp)) {
+                            Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
 
-                                // Flecha Arriba para el Día (-1)
-                                IconButton(
-                                    onClick = { viewModel.moverDia(diaIndex, -1) },
-                                    enabled = diaIndex > 0
-                                ) {
-                                    Icon(
-                                        imageVector = Icons.Default.ArrowUpward,
-                                        contentDescription = "Subir Día",
-                                        tint = if (diaIndex > 0) NaranjaAcento else TextoSecundario.copy(alpha = 0.2f)
-                                    )
-                                }
+                                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
+                                    Text("Día ${dia.ordenSecuencia}: ${dia.nombreDia}", fontWeight = FontWeight.Black, color = NaranjaAcento, fontSize = 16.sp, modifier = Modifier.weight(1f))
 
-                                // Flecha Abajo para el Día (+1)
-                                IconButton(
-                                    onClick = { viewModel.moverDia(diaIndex, 1) },
-                                    enabled = diaIndex < diasOrdenados.size - 1
-                                ) {
-                                    Icon(
-                                        imageVector = Icons.Default.ArrowDownward,
-                                        contentDescription = "Bajar Día",
-                                        tint = if (diaIndex < diasOrdenados.size - 1) NaranjaAcento else TextoSecundario.copy(alpha = 0.2f)
-                                    )
-                                }
-
-                                IconButton(onClick = { viewModel.eliminarDia(diaIndex) }) { Icon(Icons.Default.Delete, null, tint = Color(0xFFE57373)) }
-                            }
-
-                            val ejerciciosOrdenados = dia.ejercicios.sortedBy { it.ordenSecuencia }
-
-                            ejerciciosOrdenados.forEachIndexed { ejIndex, ejercicio ->
-                                Card(modifier = Modifier.fillMaxWidth(), colors = CardDefaults.cardColors(containerColor = FondoOscuro), shape = RoundedCornerShape(12.dp), border = androidx.compose.foundation.BorderStroke(1.dp, FondoTarjeta)) {
-                                    Column(modifier = Modifier.padding(12.dp)) {
-
-                                        // 🚀 INTERFAZ CORREGIDA: Vinculación con moverEjercicio(diaIndex, ejIndex, direccion)
-                                        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
-                                            Text("${ejercicio.ordenSecuencia}. ${ejercicio.nombre}", fontWeight = FontWeight.Bold, color = Color.White, modifier = Modifier.weight(1f))
-
-                                            // Flecha Arriba para el Ejercicio (-1)
-                                            IconButton(
-                                                onClick = { viewModel.moverEjercicio(diaIndex, ejIndex, -1) },
-                                                enabled = ejIndex > 0
-                                            ) {
-                                                Icon(
-                                                    imageVector = Icons.Default.ArrowUpward,
-                                                    contentDescription = "Subir Ejercicio",
-                                                    tint = if (ejIndex > 0) TextoSecundario else TextoSecundario.copy(alpha = 0.2f),
-                                                    modifier = Modifier.size(18.dp)
-                                                )
-                                            }
-
-                                            // Flecha Abajo para el Ejercicio (+1)
-                                            IconButton(
-                                                onClick = { viewModel.moverEjercicio(diaIndex, ejIndex, 1) },
-                                                enabled = ejIndex < ejerciciosOrdenados.size - 1
-                                            ) {
-                                                Icon(
-                                                    imageVector = Icons.Default.ArrowDownward,
-                                                    contentDescription = "Bajar Ejercicio",
-                                                    tint = if (ejIndex < ejerciciosOrdenados.size - 1) TextoSecundario else TextoSecundario.copy(alpha = 0.2f),
-                                                    modifier = Modifier.size(18.dp)
-                                                )
-                                            }
-
-                                            IconButton(onClick = { viewModel.eliminarEjercicio(diaIndex, ejIndex) }) { Icon(Icons.Default.Clear, null, tint = TextoSecundario) }
-                                        }
-
-                                        HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp), color = FondoTarjeta)
-
-                                        EditorSeriesPrescritas(
-                                            seriesPrescritas = ejercicio.seriesPrescritas,
-                                            onSeriesUpdate = { nuevaLista ->
-                                                viewModel.actualizarEjercicio(diaIndex, ejIndex, ejercicio.copy(seriesPrescritas = nuevaLista))
-                                            }
-                                        )
-
-                                        Spacer(modifier = Modifier.height(12.dp))
-
-                                        OutlinedTextField(
-                                            value = if (ejercicio.descansoSegundos == 0) "" else ejercicio.descansoSegundos.toString(),
-                                            onValueChange = { nv -> if (nv.all { it.isDigit() }) viewModel.actualizarEjercicio(diaIndex, ejIndex, ejercicio.copy(descansoSegundos = nv.toIntOrNull() ?: 0)) },
-                                            label = { Text("Descanso sugerido (segundos)", color = TextoSecundario) },
-                                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                                            modifier = Modifier.fillMaxWidth(), singleLine = true,
-                                            colors = OutlinedTextFieldDefaults.colors(focusedTextColor = Color.White, unfocusedTextColor = Color.White, focusedBorderColor = NaranjaAcento, unfocusedBorderColor = TextoSecundario.copy(alpha = 0.4f), focusedContainerColor = FondoTarjeta, unfocusedContainerColor = FondoTarjeta)
+                                    IconButton(
+                                        onClick = { viewModel.moverDia(realDiaIndex, -1) },
+                                        enabled = visualDiaIndex > 0
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.ArrowUpward,
+                                            contentDescription = "Subir Día",
+                                            tint = if (visualDiaIndex > 0) NaranjaAcento else TextoSecundario.copy(alpha = 0.2f)
                                         )
                                     }
-                                }
-                            }
 
-                            OutlinedButton(
-                                onClick = { diaSeleccionadoParaEjercicio = diaIndex; showBottomSheetEjercicios = true },
-                                modifier = Modifier.fillMaxWidth(), colors = ButtonDefaults.outlinedButtonColors(contentColor = NaranjaAcento),
-                                border = androidx.compose.foundation.BorderStroke(1.dp, NaranjaAcento.copy(alpha = 0.5f)), shape = RoundedCornerShape(10.dp)
-                            ) {
-                                Icon(Icons.Default.Add, null, modifier = Modifier.size(16.dp))
-                                Spacer(modifier = Modifier.width(6.dp))
-                                Text("Añadir Ejercicio", fontWeight = FontWeight.Bold)
+                                    IconButton(
+                                        onClick = { viewModel.moverDia(realDiaIndex, 1) },
+                                        enabled = visualDiaIndex < diasOrdenados.size - 1
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.ArrowDownward,
+                                            contentDescription = "Bajar Día",
+                                            tint = if (visualDiaIndex < diasOrdenados.size - 1) NaranjaAcento else TextoSecundario.copy(alpha = 0.2f)
+                                        )
+                                    }
+
+                                    IconButton(onClick = { viewModel.eliminarDia(realDiaIndex) }) { Icon(Icons.Default.Delete, null, tint = Color(0xFFE57373)) }
+                                }
+
+                                val ejerciciosOrdenados = dia.ejercicios.sortedBy { it.ordenSecuencia }
+
+                                ejerciciosOrdenados.forEachIndexed { visualEjIndex, ejercicio ->
+                                    // 🟢 CORREGIDO: Buscamos el índice real del ejercicio en el arreglo nativo para evitar desfases al borrar/mover
+                                    val realEjIndex = remember(dia.ejercicios, ejercicio) {
+                                        dia.ejercicios.indexOf(ejercicio)
+                                    }
+
+                                    key(ejercicio.ordenSecuencia) {
+                                        Card(modifier = Modifier.fillMaxWidth(), colors = CardDefaults.cardColors(containerColor = FondoOscuro), shape = RoundedCornerShape(12.dp), border = androidx.compose.foundation.BorderStroke(1.dp, FondoTarjeta)) {
+                                            Column(modifier = Modifier.padding(12.dp)) {
+
+                                                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
+                                                    Text("${ejercicio.ordenSecuencia}. ${ejercicio.nombre}", fontWeight = FontWeight.Bold, color = Color.White, modifier = Modifier.weight(1f))
+
+                                                    IconButton(
+                                                        onClick = { viewModel.moverEjercicio(realDiaIndex, realEjIndex, -1) },
+                                                        enabled = visualEjIndex > 0
+                                                    ) {
+                                                        Icon(
+                                                            imageVector = Icons.Default.ArrowUpward,
+                                                            contentDescription = "Subir Ejercicio",
+                                                            tint = if (visualEjIndex > 0) TextoSecundario else TextoSecundario.copy(alpha = 0.2f),
+                                                            modifier = Modifier.size(18.dp)
+                                                        )
+                                                    }
+
+                                                    IconButton(
+                                                        onClick = { viewModel.moverEjercicio(realDiaIndex, realEjIndex, 1) },
+                                                        enabled = visualEjIndex < ejerciciosOrdenados.size - 1
+                                                    ) {
+                                                        Icon(
+                                                            imageVector = Icons.Default.ArrowDownward,
+                                                            contentDescription = "Bajar Ejercicio",
+                                                            tint = if (visualEjIndex < ejerciciosOrdenados.size - 1) TextoSecundario else TextoSecundario.copy(alpha = 0.2f),
+                                                            modifier = Modifier.size(18.dp)
+                                                        )
+                                                    }
+
+                                                    IconButton(onClick = { viewModel.eliminarEjercicio(realDiaIndex, realEjIndex) }) { Icon(Icons.Default.Clear, null, tint = TextoSecundario) }
+                                                }
+
+                                                HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp), color = FondoTarjeta)
+
+                                                EditorSeriesPrescritas(
+                                                    seriesPrescritas = ejercicio.seriesPrescritas,
+                                                    onSeriesUpdate = { nuevaLista ->
+                                                        viewModel.actualizarEjercicio(realDiaIndex, realEjIndex, ejercicio.copy(seriesPrescritas = nuevaLista))
+                                                    }
+                                                )
+
+                                                Spacer(modifier = Modifier.height(12.dp))
+
+                                                OutlinedTextField(
+                                                    value = if (ejercicio.descansoSegundos == 0) "" else ejercicio.descansoSegundos.toString(),
+                                                    onValueChange = { nv -> if (nv.all { it.isDigit() }) viewModel.actualizarEjercicio(realDiaIndex, realEjIndex, ejercicio.copy(descansoSegundos = nv.toIntOrNull() ?: 0)) },
+                                                    label = { Text("Descanso sugerido (segundos)", color = TextoSecundario) },
+                                                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                                                    modifier = Modifier.fillMaxWidth(), singleLine = true,
+                                                    colors = OutlinedTextFieldDefaults.colors(focusedTextColor = Color.White, unfocusedTextColor = Color.White, focusedBorderColor = NaranjaAcento, unfocusedBorderColor = TextoSecundario.copy(alpha = 0.4f), focusedContainerColor = FondoTarjeta, unfocusedContainerColor = FondoTarjeta)
+                                                )
+                                            }
+                                        }
+                                    }
+                                }
+
+                                OutlinedButton(
+                                    onClick = { diaSeleccionadoParaEjercicio = realDiaIndex; showBottomSheetEjercicios = true },
+                                    modifier = Modifier.fillMaxWidth(), colors = ButtonDefaults.outlinedButtonColors(contentColor = NaranjaAcento),
+                                    border = androidx.compose.foundation.BorderStroke(1.dp, NaranjaAcento.copy(alpha = 0.5f)), shape = RoundedCornerShape(10.dp)
+                                ) {
+                                    Icon(Icons.Default.Add, null, modifier = Modifier.size(16.dp))
+                                    Spacer(modifier = Modifier.width(6.dp))
+                                    Text("Añadir Ejercicio", fontWeight = FontWeight.Bold)
+                                }
                             }
                         }
                     }
@@ -308,46 +314,49 @@ fun EditorSeriesPrescritas(
                 TipoSerie.REST_PAUSE -> "Rest-Pause" to Color(0xFFAED581)
             }
 
-            Row(modifier = Modifier.fillMaxWidth().background(FondoOscuro.copy(alpha = 0.5f), RoundedCornerShape(12.dp)).border(1.dp, TextoSecundario.copy(alpha = 0.15f), RoundedCornerShape(12.dp)).padding(vertical = 6.dp, horizontal = 4.dp), verticalAlignment = Alignment.CenterVertically) {
-                Box(modifier = Modifier.weight(0.4f).size(24.dp).background(FondoTarjeta, CircleShape).border(1.dp, NaranjaAcento.copy(alpha = 0.5f), CircleShape), contentAlignment = Alignment.Center) {
-                    Text("${index + 1}", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 12.sp)
-                }
-
-                Box(modifier = Modifier.weight(1.8f).padding(horizontal = 4.dp)) {
-                    Surface(
-                        onClick = {
-                            val todosLosEnums = TipoSerie.values()
-                            val siguienteOrdinal = (serie.tipo.ordinal + 1) % todosLosEnums.size
-                            val nuevoTipoEnum = todosLosEnums[siguienteOrdinal]
-                            val nuevaLista = seriesPrescritas.toMutableList()
-                            nuevaLista[index] = serie.copy(tipo = nuevoTipoEnum)
-                            onSeriesUpdate(nuevaLista)
-                        },
-                        shape = RoundedCornerShape(8.dp), color = colorClave.copy(alpha = 0.15f), border = androidx.compose.foundation.BorderStroke(1.dp, colorClave)
-                    ) {
-                        Text(text = etiquetaUi, color = colorClave, fontSize = 11.sp, fontWeight = FontWeight.Black, modifier = Modifier.padding(horizontal = 8.dp, vertical = 6.dp), textAlign = TextAlign.Center)
+            // 🟢 CORREGIDO: Bloque key explícito en base al índice estable. Bloquea la pérdida de foco del teclado al modificar el TextField
+            key(index) {
+                Row(modifier = Modifier.fillMaxWidth().background(FondoOscuro.copy(alpha = 0.5f), RoundedCornerShape(12.dp)).border(1.dp, TextoSecundario.copy(alpha = 0.15f), RoundedCornerShape(12.dp)).padding(vertical = 6.dp, horizontal = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Box(modifier = Modifier.weight(0.4f).size(24.dp).background(FondoTarjeta, CircleShape).border(1.dp, NaranjaAcento.copy(alpha = 0.5f), CircleShape), contentAlignment = Alignment.Center) {
+                        Text("${index + 1}", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 12.sp)
                     }
-                }
 
-                Box(modifier = Modifier.weight(0.9f).padding(horizontal = 2.dp)) {
-                    OutlinedTextField(
-                        value = if (serie.repeticiones == 0) "" else serie.repeticiones.toString(),
-                        onValueChange = { valor ->
-                            val limpiado = valor.filter { it.isDigit() }
-                            val nuevaLista = seriesPrescritas.toMutableList()
-                            nuevaLista[index] = serie.copy(repeticiones = limpiado.toIntOrNull() ?: 0)
-                            onSeriesUpdate(nuevaLista)
-                        },
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), singleLine = true,
-                        textStyle = androidx.compose.ui.text.TextStyle(color = Color.White, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center, fontSize = 14.sp),
-                        colors = OutlinedTextFieldDefaults.colors(focusedTextColor = Color.White, unfocusedTextColor = Color.White, focusedBorderColor = NaranjaAcento, unfocusedBorderColor = TextoSecundario.copy(alpha = 0.4f), focusedContainerColor = FondoTarjeta, unfocusedContainerColor = FondoTarjeta),
-                        modifier = Modifier.fillMaxWidth().height(46.dp)
-                    )
-                }
+                    Box(modifier = Modifier.weight(1.8f).padding(horizontal = 4.dp)) {
+                        Surface(
+                            onClick = {
+                                val todosLosEnums = TipoSerie.entries // Usamos .entries en lugar de .values() por optimización moderna KMP
+                                val siguienteOrdinal = (serie.tipo.ordinal + 1) % todosLosEnums.size
+                                val nuevoTipoEnum = todosLosEnums[siguienteOrdinal]
+                                val nuevaLista = seriesPrescritas.toMutableList()
+                                nuevaLista[index] = serie.copy(tipo = nuevoTipoEnum)
+                                onSeriesUpdate(nuevaLista)
+                            },
+                            shape = RoundedCornerShape(8.dp), color = colorClave.copy(alpha = 0.15f), border = androidx.compose.foundation.BorderStroke(1.dp, colorClave)
+                        ) {
+                            Text(text = etiquetaUi, color = colorClave, fontSize = 11.sp, fontWeight = FontWeight.Black, modifier = Modifier.padding(horizontal = 8.dp, vertical = 6.dp), textAlign = TextAlign.Center)
+                        }
+                    }
 
-                Box(modifier = Modifier.weight(0.9f), contentAlignment = Alignment.Center) {
-                    IconButton(onClick = { val nuevaLista = seriesPrescritas.toMutableList(); nuevaLista.removeAt(index); onSeriesUpdate(nuevaLista) }, modifier = Modifier.size(32.dp)) {
-                        Icon(Icons.Default.Delete, null, tint = Color(0xFFE57373).copy(alpha = 0.8f), modifier = Modifier.size(18.dp))
+                    Box(modifier = Modifier.weight(0.9f).padding(horizontal = 2.dp)) {
+                        OutlinedTextField(
+                            value = if (serie.repeticiones == 0) "" else serie.repeticiones.toString(),
+                            onValueChange = { valor ->
+                                val limpiado = valor.filter { it.isDigit() }
+                                val nuevaLista = seriesPrescritas.toMutableList()
+                                nuevaLista[index] = serie.copy(repeticiones = limpiado.toIntOrNull() ?: 0)
+                                onSeriesUpdate(nuevaLista)
+                            },
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), singleLine = true,
+                            textStyle = androidx.compose.ui.text.TextStyle(color = Color.White, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center, fontSize = 14.sp),
+                            colors = OutlinedTextFieldDefaults.colors(focusedTextColor = Color.White, unfocusedTextColor = Color.White, focusedBorderColor = NaranjaAcento, unfocusedBorderColor = TextoSecundario.copy(alpha = 0.4f), focusedContainerColor = FondoTarjeta, unfocusedContainerColor = FondoTarjeta),
+                            modifier = Modifier.fillMaxWidth().height(46.dp)
+                        )
+                    }
+
+                    Box(modifier = Modifier.weight(0.9f), contentAlignment = Alignment.Center) {
+                        IconButton(onClick = { val nuevaLista = seriesPrescritas.toMutableList(); nuevaLista.removeAt(index); onSeriesUpdate(nuevaLista) }, modifier = Modifier.size(32.dp)) {
+                            Icon(Icons.Default.Delete, null, tint = Color(0xFFE57373).copy(alpha = 0.8f), modifier = Modifier.size(18.dp))
+                        }
                     }
                 }
             }

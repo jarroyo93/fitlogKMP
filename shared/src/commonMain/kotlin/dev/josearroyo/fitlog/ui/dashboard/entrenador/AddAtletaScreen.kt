@@ -14,6 +14,7 @@ import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -67,7 +68,6 @@ fun AddAtletaScreen(
         },
         containerColor = FondoOscuro
     ) { paddingValues ->
-        // 🟢 Usamos un Column general para que los botones y errores estén FIJOS abajo
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -75,7 +75,6 @@ fun AddAtletaScreen(
                 .background(FondoOscuro)
                 .padding(16.dp)
         ) {
-            // Indicador de Progreso
             Row(
                 modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -90,7 +89,6 @@ fun AddAtletaScreen(
                 )
             }
 
-            // Área central scrollable que contiene los subformularios
             Box(
                 modifier = Modifier
                     .weight(1f)
@@ -111,7 +109,6 @@ fun AddAtletaScreen(
                 }
             }
 
-            // 🟢 ERROR FIJO ABAJO: Siempre visible sin importar el scroll
             state.error?.let { err ->
                 Spacer(modifier = Modifier.height(8.dp))
                 Card(
@@ -132,7 +129,6 @@ fun AddAtletaScreen(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Botones de Navegación del Formulario (Fijos abajo)
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(12.dp)
@@ -174,10 +170,6 @@ fun AddAtletaScreen(
     }
 }
 
-// ===================================================================================
-// SUBFORMULARIOS Y COMPOSABLES AUXILIARES
-// ===================================================================================
-
 @Composable
 fun FormularioDatosPersonales(u: Usuario, confirmarCorreo: String, viewModel: AddAtletaViewModel) {
     Card(colors = CardDefaults.cardColors(containerColor = FondoTarjeta)) {
@@ -218,7 +210,6 @@ fun FormularioDatosPersonales(u: Usuario, confirmarCorreo: String, viewModel: Ad
                     label = "T. Sangre",
                     modifier = Modifier.weight(1f)
                 )
-                // 🟢 REEMPLAZADO por el dropdown con buscador de nacionalidades
                 SearchableNacionalidadDropdown(
                     selectedNacionalidad = u.nacionalidad,
                     onNacionalidadSelected = { viewModel.onEvent(AddAtletaEvent.UpdateUsuario(u.copy(nacionalidad = it))) },
@@ -229,7 +220,6 @@ fun FormularioDatosPersonales(u: Usuario, confirmarCorreo: String, viewModel: Ad
             AtletaTextField(u.telefono, { viewModel.onEvent(AddAtletaEvent.UpdateUsuario(u.copy(telefono = it))) }, "Teléfono Celular", keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone))
             AtletaTextField(u.correo, { viewModel.onEvent(AddAtletaEvent.UpdateUsuario(u.copy(correo = it))) }, "Correo Electrónico *", keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email))
 
-            // 🟢 Campo con aviso visual de no coincidencia en tiempo real
             val noCoincide = u.correo.isNotBlank() && confirmarCorreo.isNotBlank() && u.correo.trim().lowercase() != confirmarCorreo.trim().lowercase()
             AtletaTextField(
                 value = confirmarCorreo,
@@ -261,7 +251,6 @@ fun FormularioValoracionFisica(v: ValoracionFisica, viewModel: AddAtletaViewMode
                 DecimalField(v.alturaCm, { viewModel.onEvent(AddAtletaEvent.UpdateValoracion(v.copy(alturaCm = it))) }, "Altura (cm)", Modifier.weight(1f))
             }
 
-            // 🟢 SWITCH DE COMPOSICIÓN AVANZADA ORIGINAL SIN DROPDOWN INNECESARIO
             Row(
                 modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -278,7 +267,6 @@ fun FormularioValoracionFisica(v: ValoracionFisica, viewModel: AddAtletaViewMode
                 )
             }
 
-            // 🟢 SI SE ENCUENTRA ACTIVO, MOSTRAMOS LAS 3 PESTAÑAS (TABS)
             AnimatedVisibility(visible = v.mostrarComposicionAvanzada) {
                 Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
                     val tabs = listOf(
@@ -305,7 +293,6 @@ fun FormularioValoracionFisica(v: ValoracionFisica, viewModel: AddAtletaViewMode
                         }
                     }
 
-                    // 🟢 SEGÚN LA PESTAÑA, CARGAMOS EL COMPONENTE ADECUADO (O AMBOS JUNTOS)
                     when (v.metodoComposicion) {
                         MetodoComposicionCorporal.ANTROPOMETRIA -> {
                             SubFormularioAntropometriaAtleta(v, viewModel)
@@ -324,10 +311,11 @@ fun FormularioValoracionFisica(v: ValoracionFisica, viewModel: AddAtletaViewMode
                 }
             }
 
+            // 🟢 CORREGIDO: Migrado de .values() a .entries para optimizar memoria KMP
             AtletaDropdown(
                 selectedOption = v.nivelExperiencia.name,
                 onOptionSelected = { viewModel.onEvent(AddAtletaEvent.UpdateValoracion(v.copy(nivelExperiencia = NivelExperiencia.valueOf(it)))) },
-                options = NivelExperiencia.values().map { it.name },
+                options = NivelExperiencia.entries.map { it.name },
                 label = "Nivel de Experiencia"
             )
 
@@ -409,13 +397,14 @@ fun FormularioSuscripcion(state: AddAtletaState, viewModel: AddAtletaViewModel) 
         Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             Text("Asignación de Membresía Inicial", style = MaterialTheme.typography.titleMedium, color = NaranjaAcento, fontWeight = FontWeight.Bold)
 
+            // 🟢 CORREGIDO: Migrado de .values() a .entries para optimizar memoria KMP
             AtletaDropdown(
                 selectedOption = state.planSeleccionado.etiqueta,
                 onOptionSelected = { etiqueta ->
-                    val plan = TipoPlanSuscripcion.values().find { it.etiqueta == etiqueta } ?: TipoPlanSuscripcion.MENSUAL
+                    val plan = TipoPlanSuscripcion.entries.find { it.etiqueta == etiqueta } ?: TipoPlanSuscripcion.MENSUAL
                     viewModel.onEvent(AddAtletaEvent.UpdatePlan(plan))
                 },
-                options = TipoPlanSuscripcion.values().map { it.etiqueta },
+                options = TipoPlanSuscripcion.entries.map { it.etiqueta },
                 label = "Membresía / Suscripción"
             )
 
@@ -440,7 +429,6 @@ fun FormularioSuscripcion(state: AddAtletaState, viewModel: AddAtletaViewModel) 
                 }
             }
 
-            // 🟢 SE DEVELA EL SELECTOR DE FECHA CUANDO SE DESACTIVA "Iniciar Enseguida"
             AnimatedVisibility(visible = !state.iniciarPeriodoEnseguida) {
                 Column(
                     verticalArrangement = Arrangement.spacedBy(8.dp),
@@ -457,10 +445,6 @@ fun FormularioSuscripcion(state: AddAtletaState, viewModel: AddAtletaViewModel) 
         }
     }
 }
-
-// ===================================================================================
-// COMPONENTES REUTILIZABLES COMUNES
-// ===================================================================================
 
 @Composable
 fun AtletaTextField(
@@ -496,7 +480,8 @@ fun AtletaDropdown(
     label: String,
     modifier: Modifier = Modifier
 ) {
-    var expanded by remember { mutableStateOf(false) }
+    // 🟢 CORREGIDO: rememberSaveable para resguardar el menú desplegable abierto
+    var expanded by rememberSaveable { mutableStateOf(false) }
 
     Box(modifier = modifier) {
         OutlinedTextField(
@@ -540,14 +525,14 @@ fun AtletaDropdown(
     }
 }
 
-// 🟢 SE ADICIONA COMPONENTE BUSCADOR PARA LAS NACIONALIDADES (KMP SAFE)
 @Composable
 fun SearchableNacionalidadDropdown(
     selectedNacionalidad: String,
     onNacionalidadSelected: (String) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    var showDialog by remember { mutableStateOf(false) }
+    // 🟢 CORREGIDO: rememberSaveable blinda el estado del diálogo de nacionalidades
+    var showDialog by rememberSaveable { mutableStateOf(false) }
 
     Box(modifier = modifier) {
         OutlinedTextField(
@@ -586,7 +571,7 @@ fun SearchableNacionalidadDialog(
     onDismiss: () -> Unit,
     onSelected: (String) -> Unit
 ) {
-    var query by remember { mutableStateOf("") }
+    var query by rememberSaveable { mutableStateOf("") }
     val filteredList = remember(query) {
         listaCompletaNacionalidades.filter { it.contains(query, ignoreCase = true) }
     }
@@ -621,7 +606,7 @@ fun SearchableNacionalidadDialog(
                         androidx.compose.foundation.lazy.LazyColumn(
                             verticalArrangement = Arrangement.spacedBy(4.dp)
                         ) {
-                            items(filteredList.size) { index ->
+                            items(filteredList.size, key = { filteredList[it] }) { index ->
                                 val nacionalidad = filteredList[index]
                                 Row(
                                     modifier = Modifier
@@ -659,7 +644,8 @@ fun AtletaDatePickerFieldKmp(
     label: String,
     modifier: Modifier = Modifier
 ) {
-    var showDatePicker by remember { mutableStateOf(false) }
+    // 🟢 CORREGIDO: Estado persistente para el selector de calendario nativo
+    var showDatePicker by rememberSaveable { mutableStateOf(false) }
 
     Box(modifier = modifier) {
         OutlinedTextField(
@@ -707,7 +693,8 @@ fun AtletaTimePickerFieldKmp(
     label: String,
     modifier: Modifier = Modifier
 ) {
-    var showTimePicker by remember { mutableStateOf(false) }
+    // 🟢 CORREGIDO: Estado persistente para el reloj analógico manual
+    var showTimePicker by rememberSaveable { mutableStateOf(false) }
 
     Box(modifier = modifier) {
         OutlinedTextField(
@@ -741,7 +728,6 @@ fun AtletaTimePickerFieldKmp(
     }
 }
 
-// Diálogo Multiplataforma nativo para la fecha de nacimiento usando Material 3
 @Composable
 fun KmpDatePickerDialog(
     onDismiss: () -> Unit,
@@ -778,14 +764,13 @@ fun KmpDatePickerDialog(
     }
 }
 
-// Diálogo Simple Multiplataforma para Horas
 @Composable
 fun KmpTimePickerDialog(
     onDismiss: () -> Unit,
     onTimeSelected: (String) -> Unit
 ) {
-    var hour by remember { mutableStateOf(6) }
-    var minute by remember { mutableStateOf(0) }
+    var hour by rememberSaveable { mutableStateOf(6) }
+    var minute by rememberSaveable { mutableStateOf(0) }
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -847,7 +832,6 @@ fun NumberPickerSimple(
     }
 }
 
-// Helpers numéricos del formulario
 @Composable fun DecimalField(value: Double, onValueChange: (Double) -> Unit, label: String, modifier: Modifier = Modifier) {
     AtletaTextField(if (value == 0.0) "" else value.toString(), { onValueChange(it.toDoubleOrNull() ?: 0.0) }, label, modifier, KeyboardOptions(keyboardType = KeyboardType.Decimal))
 }
@@ -861,9 +845,6 @@ fun NumberPickerSimple(
     AtletaTextField(value?.toString() ?: "", { onValueChange(it.toIntOrNull()) }, label, modifier, KeyboardOptions(keyboardType = KeyboardType.Number))
 }
 
-// ===================================================================================
-// LISTA COMPLETA DE NACIONALIDADES PARA EL BUSCADOR
-// ===================================================================================
 private val listaCompletaNacionalidades = listOf(
     "Alemana", "Argentina", "Australiana", "Belga", "Boliviana", "Brasileña", "Canadiense",
     "Chilena", "China", "Colombiana", "Costarricense", "Cubana", "Ecuatoriana", "Salvadoreña",

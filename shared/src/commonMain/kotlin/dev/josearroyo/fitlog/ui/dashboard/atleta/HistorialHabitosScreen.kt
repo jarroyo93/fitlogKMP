@@ -11,6 +11,7 @@ import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -78,7 +79,8 @@ fun HistorialHabitosScreen(
                 contentPadding = PaddingValues(16.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                items(state.lista) { habitos ->
+                // 🟢 CORREGIDO: Se añade una firma key basándose en la marca de tiempo de registro para optimizar la recomposición del LazyColumn
+                items(state.lista, key = { it.fechaRegistro }) { habitos ->
                     HabitosCard(habitos)
                 }
             }
@@ -88,7 +90,8 @@ fun HistorialHabitosScreen(
 
 @Composable
 fun HabitosCard(h: Habitos) {
-    var expandido by remember { mutableStateOf(false) }
+    // 🟢 CORREGIDO: Usamos rememberSaveable para que la tarjeta no se cierre sola al reciclarse con el scroll del LazyColumn
+    var expandido by rememberSaveable { mutableStateOf(false) }
 
     Card(
         modifier = Modifier.fillMaxWidth(),

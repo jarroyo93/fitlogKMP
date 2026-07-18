@@ -3,35 +3,36 @@ package dev.josearroyo.fitlog.ui.dashboard.atleta
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ExitToApp
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material.icons.filled.LinkOff
+import androidx.compose.material.icons.filled.Badge
+import androidx.compose.material.icons.filled.CardMembership
+import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Sports
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import kotlinx.coroutines.launch
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.filled.Badge
-import androidx.compose.material.icons.filled.CardMembership
-import androidx.compose.material.icons.filled.Edit
-import androidx.compose.material.icons.filled.Sports
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.unit.sp
-import androidx.navigation.NavGraph.Companion.findStartDestination
 
 // 🟢 MODELOS Y REPOSITORIOS KMP DEL PROYECTO
 import dev.josearroyo.fitlog.data.model.EstadoSuscripcion
@@ -63,6 +64,7 @@ fun AtletaMainScreen(
     val bottomNavController = rememberNavController()
     val scope = rememberCoroutineScope()
     val userRepository = remember { UserRepository() }
+    val authRepository = remember { AuthRepository() }
 
     var usuario by remember { mutableStateOf<Usuario?>(null) }
     var isLoading by remember { mutableStateOf(true) }
@@ -96,7 +98,7 @@ fun AtletaMainScreen(
             EstadoSuscripcion.ACTIVO
         } else {
             val u = usuario!!
-            val ahora = getCurrentTimeMillis() // 🟢 Migrado de System.currentTimeMillis() a KMP
+            val ahora = getCurrentTimeMillis()
             val vencimiento = u.vencimientoSuscripcion ?: 0L
             val fechaInicio = u.fechaInicioSuscripcion ?: 0L
 
@@ -110,7 +112,6 @@ fun AtletaMainScreen(
         }
     }
 
-    // 🔥 ARQUITECTURA LINEAL PURA SIN SCAFFOLD INTERNO
     Column(modifier = modifier.fillMaxSize().background(FondoOscuro)) {
 
         // 1. Cabecera Estática Superior (Fila rígida manual)
@@ -146,7 +147,17 @@ fun AtletaMainScreen(
             } else if (usuario != null) {
                 when (estadoReal) {
                     EstadoSuscripcion.HUERFANO -> {
-                        PantallaHuerfano(isActionLoading = isActionLoading, onIngresarCodigo = { corr, cod -> scope.launch { isActionLoading = true; if (userRepository.vincularConEntrenador(usuario!!.id, corr, cod)) recargarEstado(); isActionLoading = false } }, onLogout = onLogout)
+                        PantallaHuerfano(
+                            isActionLoading = isActionLoading,
+                            onIngresarCodigo = { corr, cod ->
+                                scope.launch {
+                                    isActionLoading = true
+                                    if (userRepository.vincularConEntrenador(usuario!!.id, corr, cod)) recargarEstado()
+                                    isActionLoading = false
+                                }
+                            },
+                            onLogout = onLogout
+                        )
                     }
                     EstadoSuscripcion.SUSPENDIDO -> {
                         PantallaRestringida(titulo = "Cuenta Congelada", mensaje = "Tu plan de entrenamiento está pausado. Comunícate con tu coach.", textoBotonPrincipal = "Actualizar Estado", isActionLoading = isActionLoading, onAccionPrincipal = { recargarEstado() }, onDesvincularClick = { showDesvincularDialog = true }, onLogout = onLogout)
@@ -160,7 +171,6 @@ fun AtletaMainScreen(
                             startDestination = BottomNavItem.AtletaInicio.route,
                             modifier = Modifier.fillMaxSize()
                         ) {
-                            // 🟢 STUBS / PLACEHOLDERS: Mantiene compilable el contenedor mientras migramos las pantallas hijas una a una
                             composable(BottomNavItem.AtletaInicio.route) {
                                 AtletaInicioScreen(
                                     uid = uid,
@@ -183,7 +193,13 @@ fun AtletaMainScreen(
                             composable(BottomNavItem.AtletaPerfil.route) {
                                 PerfilAtletaTab(
                                     uid = uid,
-                                    onLogout = onLogout,
+                                    atletaFallback = usuario!!, // 🟢 Pasado como salvaguarda estricta de inferencia
+                                    onLogout = {
+                                        scope.launch {
+                                            authRepository.logout()
+                                            onLogout()
+                                        }
+                                    },
                                     onDesvincularClick = { showDesvincularDialog = true },
                                     onEditDatosPersonalesClick = { onNavigateToEditarDatosPersonales(uid) }
                                 )
@@ -203,7 +219,7 @@ fun AtletaMainScreen(
             }
         }
 
-        // 3. Base Rígida Inferior (Eleva el menú sobre la barra de botones del terminal)
+        // 3. Base Rígida Inferior
         if (!esPantallaEntrenar && estadoReal == EstadoSuscripcion.ACTIVO) {
             Box(
                 modifier = Modifier
@@ -216,12 +232,11 @@ fun AtletaMainScreen(
         }
     }
 
-    // Diálogos Overlay fuera de los flujos lineales
     if (showDesvincularDialog && usuario != null) {
         val diasRestantes = when (estadoReal) {
             EstadoSuscripcion.SUSPENDIDO -> ((usuario!!.saldoMilisegundosRestantes ?: 0L) / (1000 * 60 * 60 * 24))
             EstadoSuscripcion.ACTIVO -> {
-                val diff = (usuario!!.vencimientoSuscripcion ?: 0L) - getCurrentTimeMillis() // 🟢 Migrado a getCurrentTimeMillis()
+                val diff = (usuario!!.vencimientoSuscripcion ?: 0L) - getCurrentTimeMillis()
                 if (diff > 0) diff / (1000 * 60 * 60 * 24) else 0L
             }
             else -> 0L
@@ -357,10 +372,7 @@ fun PantallaRestringida(
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(48.dp),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = NaranjaAcento,
-                        contentColor = FondoOscuro
-                    ),
+                    colors = ButtonDefaults.buttonColors(containerColor = NaranjaAcento, contentColor = FondoOscuro),
                     shape = RoundedCornerShape(10.dp)
                 ) {
                     Text(text = textoBotonPrincipal, fontWeight = FontWeight.Bold)
@@ -373,13 +385,8 @@ fun PantallaRestringida(
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(48.dp),
-                    colors = ButtonDefaults.outlinedButtonColors(
-                        contentColor = Color(0xFFE57373)
-                    ),
-                    border = androidx.compose.foundation.BorderStroke(
-                        width = 1.dp,
-                        color = Color(0xFFE57373).copy(alpha = 0.5f)
-                    ),
+                    colors = ButtonDefaults.outlinedButtonColors(contentColor = Color(0xFFE57373)),
+                    border = androidx.compose.foundation.BorderStroke(width = 1.dp, color = Color(0xFFE57373).copy(alpha = 0.5f)),
                     shape = RoundedCornerShape(10.dp)
                 ) {
                     Text(text = "Desvincularme de este entrenador", fontWeight = FontWeight.Medium)
@@ -388,6 +395,7 @@ fun PantallaRestringida(
         }
     }
 }
+
 @Composable
 fun PantallaHuerfano(
     isActionLoading: Boolean,
@@ -437,14 +445,7 @@ fun PantallaHuerfano(
                 placeholder = { Text("ejemplo@entrenador.com", color = TextoSecundario.copy(alpha = 0.3f)) },
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true,
-                colors = OutlinedTextFieldDefaults.colors(
-                    focusedTextColor = Color.White,
-                    unfocusedTextColor = Color.White,
-                    focusedBorderColor = NaranjaAcento,
-                    unfocusedBorderColor = TextoSecundario.copy(alpha = 0.4f),
-                    focusedContainerColor = FondoTarjeta,
-                    unfocusedContainerColor = FondoTarjeta
-                )
+                colors = OutlinedTextFieldDefaults.colors(focusedTextColor = Color.White, unfocusedTextColor = Color.White, focusedBorderColor = NaranjaAcento, unfocusedBorderColor = TextoSecundario.copy(alpha = 0.4f), focusedContainerColor = FondoTarjeta, unfocusedContainerColor = FondoTarjeta)
             )
 
             Spacer(modifier = Modifier.height(12.dp))
@@ -465,15 +466,7 @@ fun PantallaHuerfano(
                         Text("Correo o Código incorrecto / expirado", color = Color(0xFFE57373))
                     }
                 },
-                colors = OutlinedTextFieldDefaults.colors(
-                    focusedTextColor = Color.White,
-                    unfocusedTextColor = Color.White,
-                    focusedBorderColor = NaranjaAcento,
-                    unfocusedBorderColor = TextoSecundario.copy(alpha = 0.4f),
-                    focusedContainerColor = FondoTarjeta,
-                    unfocusedContainerColor = FondoTarjeta,
-                    errorContainerColor = FondoTarjeta
-                )
+                colors = OutlinedTextFieldDefaults.colors(focusedTextColor = Color.White, unfocusedTextColor = Color.White, focusedBorderColor = NaranjaAcento, unfocusedBorderColor = TextoSecundario.copy(alpha = 0.4f), focusedContainerColor = FondoTarjeta, unfocusedContainerColor = FondoTarjeta, errorContainerColor = FondoTarjeta)
             )
 
             Spacer(modifier = Modifier.height(24.dp))
@@ -490,10 +483,7 @@ fun PantallaHuerfano(
                         .fillMaxWidth()
                         .height(48.dp),
                     enabled = correoEntrenador.isNotBlank() && codigoEntrenador.isNotBlank(),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = NaranjaAcento,
-                        contentColor = FondoOscuro
-                    ),
+                    colors = ButtonDefaults.buttonColors(containerColor = NaranjaAcento, contentColor = FondoOscuro),
                     shape = RoundedCornerShape(10.dp)
                 ) {
                     Text(text = "Vincular Cuenta", fontWeight = FontWeight.Bold)
@@ -506,28 +496,22 @@ fun PantallaHuerfano(
 @Composable
 fun PerfilAtletaTab(
     uid: String,
+    atletaFallback: Usuario, // 🟢 Tipo Explícito inalterable: Resuelve el error de inferencia de $T$
     onLogout: () -> Unit,
     onDesvincularClick: () -> Unit,
     onEditDatosPersonalesClick: () -> Unit
 ) {
-    val perfilViewModel: PerfilAtletaViewModel = androidx.lifecycle.viewmodel.compose.viewModel()
+    // Instanciación explícita con la lambda Factory requerida por KMP
+    val perfilViewModel: PerfilAtletaViewModel = viewModel { PerfilAtletaViewModel() }
     val uiState by perfilViewModel.uiState.collectAsState()
-    val authRepository = remember { AuthRepository() }
-    val scope = rememberCoroutineScope()
+    var mostrarEntrenadorSheet by remember { mutableStateOf(false) }
 
     LaunchedEffect(uid) {
         perfilViewModel.cargarPerfil(uid)
     }
 
-    if (uiState.isLoading) {
-        Box(modifier = Modifier.fillMaxSize().background(FondoOscuro), contentAlignment = Alignment.Center) {
-            CircularProgressIndicator(color = NaranjaAcento)
-        }
-        return
-    }
-
-    val atleta = uiState.usuarioLogueado ?: return
-    var mostrarEntrenadorSheet by remember { mutableStateOf(false) }
+    // ⚡ PROTECCIÓN DE TIPADO: Si el ViewModel aún carga, se asume el Fallback tipado de la sesión
+    val atleta: Usuario = uiState.usuarioLogueado ?: atletaFallback
 
     Column(
         modifier = Modifier
@@ -544,12 +528,7 @@ fun PerfilAtletaTab(
                 .background(FondoTarjeta, CircleShape),
             contentAlignment = Alignment.Center
         ) {
-            Icon(
-                imageVector = Icons.Default.Person,
-                contentDescription = null,
-                modifier = Modifier.size(50.dp),
-                tint = NaranjaAcento
-            )
+            Icon(imageVector = Icons.Default.Person, contentDescription = null, modifier = Modifier.size(50.dp), tint = NaranjaAcento)
         }
         Spacer(modifier = Modifier.height(16.dp))
         Text(text = "${atleta.nombres} ${atleta.apellidos}", color = Color.White, fontSize = 24.sp, fontWeight = FontWeight.Bold)
@@ -563,9 +542,9 @@ fun PerfilAtletaTab(
                 Spacer(modifier = Modifier.width(16.dp))
                 Column {
                     Text("Plan Activo: ${atleta.planActivo}", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 16.sp)
-                    atleta.vencimientoSuscripcion?.let {
-                        // 🟢 Reemplazado SimpleDateFormat nativo de Java por la función KMP Platform
-                        val fechaStr = formatearFechaHistorial(it)
+                    atleta.vencimientoSuscripcion?.let { fechaLong ->
+                        // El compilador ahora sabe con certeza absoluta que 'fechaLong' es un Long primitivo
+                        val fechaStr = formatearFechaHistorial(fechaLong)
                         Text("Vence: $fechaStr", color = TextoSecundario, fontSize = 13.sp)
                     }
                 }
@@ -628,12 +607,7 @@ fun PerfilAtletaTab(
 
         Spacer(modifier = Modifier.height(12.dp))
 
-        TextButton(onClick = {
-            scope.launch {
-                authRepository.logout() // 🟢 Ahora corre dentro del scope asíncrono seguro
-                onLogout()
-            }
-        }) {
+        TextButton(onClick = onLogout) {
             Icon(Icons.Default.ExitToApp, contentDescription = null, tint = TextoSecundario)
             Spacer(modifier = Modifier.width(6.dp))
             Text("Cerrar Sesión Activa", color = TextoSecundario, fontWeight = FontWeight.Medium)

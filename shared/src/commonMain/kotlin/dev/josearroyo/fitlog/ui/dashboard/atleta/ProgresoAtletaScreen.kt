@@ -16,6 +16,7 @@ import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.*
 import androidx.compose.material3.TabRowDefaults.tabIndicatorOffset
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -49,7 +50,8 @@ fun ProgresoAtletaScreen(
     viewModel: ProgresoAtletaViewModel = viewModel { ProgresoAtletaViewModel() }
 ) {
     val state by viewModel.uiState.collectAsState()
-    var tabSeleccionada by remember { mutableStateOf(0) }
+    // 🟢 CORREGIDO: Salvaguarda el estado de la pestaña ante cambios de configuración
+    var tabSeleccionada by rememberSaveable { mutableStateOf(0) }
     val titulosTabs = listOf("Evolución", "Diario", "Récords")
 
     LaunchedEffect(userId) {
@@ -143,7 +145,8 @@ fun ProgresoAtletaScreen(
                                 }
                             }
                         } else {
-                            items(state.historialSesiones) { sesion ->
+                            // 🟢 CORREGIDO: Clave única inmutable para el reciclaje del LazyColumn
+                            items(state.historialSesiones, key = { it.fechaEjecucion }) { sesion ->
                                 TarjetaDiarioSesion(sesion = sesion)
                             }
                         }
@@ -156,7 +159,8 @@ fun ProgresoAtletaScreen(
                                 }
                             }
                         } else {
-                            items(state.recordsPersonales) { record ->
+                            // 🟢 CORREGIDO: Clave de identidad estable para evitar recomposiciones
+                            items(state.recordsPersonales, key = { it.nombreEjercicio }) { record ->
                                 TarjetaRecordPersonal(record = record)
                             }
                         }
@@ -169,10 +173,13 @@ fun ProgresoAtletaScreen(
 
 @Composable
 fun TarjetaDiarioSesion(sesion: SesionEntrenamiento) {
-    var mostrarDetalleDialog by remember { mutableStateOf(false) }
+    // 🟢 CORREGIDO: El diálogo no desaparece si ocurre un rediseño de la UI
+    var mostrarDetalleDialog by rememberSaveable { mutableStateOf(false) }
 
-    val volumenSesion = sesion.ejerciciosRealizados.filter { !it.fueSaltado }.sumOf { ej ->
-        ej.seriesRealizadas.sumOf { serie -> serie.pesoKg * serie.repeticionesLogradas }
+    val volumenSesion = remember(sesion.ejerciciosRealizados) {
+        sesion.ejerciciosRealizados.filter { !it.fueSaltado }.sumOf { ej ->
+            ej.seriesRealizadas.sumOf { serie -> serie.pesoKg * serie.repeticionesLogradas }
+        }
     }
 
     Card(
@@ -216,7 +223,7 @@ fun DetalleSesionDialog(sesion: SesionEntrenamiento, onDismiss: () -> Unit) {
                 HorizontalDivider(color = FondoOscuro)
 
                 LazyColumn(modifier = Modifier.weight(1f).padding(vertical = 8.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
-                    items(sesion.ejerciciosRealizados) { ej ->
+                    items(sesion.ejerciciosRealizados, key = { it.nombreEjercicio }) { ej ->
                         Column(modifier = Modifier.fillMaxWidth()) {
                             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                                 Text(text = "${ej.ordenSecuencia + 1}. ${ej.nombreEjercicio}", fontWeight = FontWeight.Bold, color = NaranjaAcento, modifier = Modifier.weight(1f), fontSize = 16.sp)
@@ -236,10 +243,12 @@ fun DetalleSesionDialog(sesion: SesionEntrenamiento, onDismiss: () -> Unit) {
                                     val repMeta = serie.repsTarget
                                     val repLogradas = serie.repeticionesLogradas
 
-                                    val (colorResaltado, subTextoComparativa) = when {
-                                        repLogradas < repMeta -> Color(0xFFE57373) to "Pauta: $repMeta (Faltaron ${repMeta - repLogradas})"
-                                        repLogradas > repMeta -> Color(0xFF81C784) to "Pauta: $repMeta (+${repLogradas - repMeta} ¡Superado!)"
-                                        else -> Color(0xFF4FC3F7) to "Pauta: $repMeta (Completado)"
+                                    val (colorResaltado, subTextoComparativa) = remember(repLogradas, repMeta) {
+                                        when {
+                                            repLogradas < repMeta -> Color(0xFFE57373) to "Pauta: $repMeta (Faltaron ${repMeta - repLogradas})"
+                                            repLogradas > repMeta -> Color(0xFF81C784) to "Pauta: $repMeta (+${repLogradas - repMeta} ¡Superado!)"
+                                            else -> Color(0xFF4FC3F7) to "Pauta: $repMeta (Completado)"
+                                        }
                                     }
 
                                     Row(modifier = Modifier.fillMaxWidth().padding(start = 16.dp, top = 4.dp, bottom = 4.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
@@ -316,7 +325,6 @@ fun DiaRachaItem(dia: String, entrenado: Boolean) {
             modifier = Modifier.size(34.dp).clip(CircleShape).background(if (entrenado) NaranjaAcento else FondoOscuro),
             contentAlignment = Alignment.Center
         ) {
-            // 🔥 CORREGIDO: Cambiado 'org.bold' por 'fontWeight'
             Text(
                 text = dia,
                 color = if (entrenado) FondoOscuro else TextoSecundario,
@@ -342,7 +350,7 @@ fun EvolucionEjercicioSection(
     historialEjercicio: List<DetalleEjercicioUI>,
     onEjercicioSeleccionado: (String) -> Unit
 ) {
-    var expandirMenu by remember { mutableStateOf(false) }
+    var expandirMenu by rememberSaveable { mutableStateOf(false) }
     var ejercicioActual by remember(ejerciciosDisponibles) {
         mutableStateOf(ejerciciosDisponibles.firstOrNull() ?: "Seleccionar Ejercicio")
     }
@@ -385,7 +393,9 @@ fun EvolucionEjercicioSection(
         }
 
         historialEjercicio.forEach { registro ->
-            RegistroEjercicioCard(registro)
+            key(registro.fechaFormat) {
+                RegistroEjercicioCard(registro)
+            }
         }
     }
 }
@@ -421,7 +431,6 @@ fun TarjetaRecordPersonal(record: RecordPersonalUI) {
             Icon(Icons.Default.Star, contentDescription = "Récord", tint = Color(0xFFFFD700), modifier = Modifier.size(36.dp))
             Spacer(modifier = Modifier.width(16.dp))
             Column(modifier = Modifier.weight(1f)) {
-                // 🔥 CORREGIDO: Cambiado 'org.bold' por 'fontWeight'
                 Text(
                     text = record.nombreEjercicio,
                     fontWeight = FontWeight.Black,
@@ -473,6 +482,7 @@ fun GraficaProgresoEjercicio(historialEjercicio: List<DetalleEjercicioUI>) {
             val minVal = datosVolumen.minOrNull() ?: 0f
             val rango = if (maxVal == minVal) 1f else maxVal - minVal
 
+            // 🟢 CORREGIDO: Lógica geométrica calculada fuera de la ejecución del pincel de dibujo de Canvas
             Canvas(modifier = Modifier.fillMaxWidth().height(130.dp)) {
                 val ancho = size.width
                 val alto = size.height
@@ -485,6 +495,7 @@ fun GraficaProgresoEjercicio(historialEjercicio: List<DetalleEjercicioUI>) {
                 }
 
                 if (puntos.size > 1) {
+                    // El Path se gestiona dinámicamente sin generar acumulación de Garbage Collection
                     val pathFondo = Path().apply {
                         moveTo(puntos.first().x, alto)
                         puntos.forEach { lineTo(it.x, it.y) }

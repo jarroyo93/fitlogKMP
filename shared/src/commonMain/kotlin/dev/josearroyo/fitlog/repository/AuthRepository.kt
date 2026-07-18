@@ -12,36 +12,30 @@ class AuthRepository {
         return auth.currentUser?.uid
     }
 
+    // 🟢 OPTIMIZADO: Eliminado bloque try-catch redundante. GitLive ya propaga la excepción directamente.
     suspend fun login(email: String, clave: String): String {
-        return try {
-            // En GitLive, las llamadas ya son suspendidas, no llevan .await()
-            val result = auth.signInWithEmailAndPassword(email, clave)
-            result.user?.uid ?: throw Exception("Error al obtener el UID de Firebase")
-        } catch (e: Exception) {
-            throw e
-        }
+        val result = auth.signInWithEmailAndPassword(email, clave)
+        return result.user?.uid ?: throw Exception("Error al obtener el UID de Firebase")
     }
 
     suspend fun logout() {
         auth.signOut()
     }
 
-    // =========================================================
-    // CORRECCI DE RA Z: Cambio de contrase a en primer ingreso
-    // =========================================================
     suspend fun cambiarContrasenaPrimeraVez(uid: String, nuevaContrasena: String): Result<Boolean> {
         return try {
             val user = auth.currentUser ?: return Result.failure(Exception("No hay una sesión activa."))
 
-            // Actualizamos en Firebase Auth
             user.updatePassword(nuevaContrasena)
 
-            // Apagamos el flag en Firestore de forma limpia usando sintaxis KMP
             db.collection("users").document(uid)
                 .update("requiereCambioContrasena" to false)
 
             Result.success(true)
         } catch (e: Exception) {
+            // 🚀 Reporte visible si las reglas de Firestore o las políticas de Auth bloquean el cambio
+            println("🔥 [AuthRepository] Error en cambiarContrasenaPrimeraVez: ${e.message}")
+            e.printStackTrace()
             Result.failure(e)
         }
     }

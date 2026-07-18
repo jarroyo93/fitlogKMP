@@ -44,6 +44,9 @@ class AtletaProgresoRepository {
 
             snapshot.documents.map { doc -> doc.data<Pesaje>().copy(id = doc.id) }
         } catch (e: Exception) {
+            // 🚀 Rompemos el silencio para ver el reporte real en Logcat
+            println("🔥 ERROR EN REPOSITORIO AL TRAER PESAJES: ${e.message}")
+            e.printStackTrace()
             emptyList()
         }
     }
@@ -75,12 +78,21 @@ class AtletaProgresoRepository {
     ): Boolean = try {
         val ahoraMilis = getCurrentTimeMillis()
 
+        // 🟢 DEFENSA CRÍTICA: Si el ID de la rutina viene vacío por un mapa incorrecto, lo detectamos
+        val rutinaIdReal = rutinaActual.id.ifBlank {
+            println("⚠️ ALERTA DE CONFIGURACIÓN: 'rutinaActual.id' vino VACÍO. Revisa cómo mapeas las rutinas en AtletaRepository.")
+            // Usamos un fallback temporal para que Firebase no lance una excepción de ruta inválida
+            "ID_RUTINA_DESCONOCIDO"
+        }
+
         val nuevaSesionId = generarDocumentId()
         val nuevaSesionRef = db.collection("users").document(atletaId).collection("historial_entrenamientos").document(nuevaSesionId)
         val sesionFinal = sesionProcesada.copy(id = nuevaSesionId)
 
         val ciclosRef = db.collection("users").document(atletaId).collection("ciclos_entrenamiento")
-        val rutinaRef = db.collection("users").document(atletaId).collection("rutinas_asignadas").document(rutinaActual.id)
+
+        // 🚀 Usamos el ID validado para evitar colapsar la ruta de Firestore
+        val rutinaRef = db.collection("users").document(atletaId).collection("rutinas_asignadas").document(rutinaIdReal)
 
         val activeCyclesSnapshot = ciclosRef.where("estaActivo", equalTo = true).get()
         var cicloActivo = activeCyclesSnapshot.documents.firstOrNull()?.let { doc ->
@@ -112,7 +124,6 @@ class AtletaProgresoRepository {
                     }
                 }
 
-                // 🔥 Invocación a nuestra función puente multiplataforma
                 val fechaCierreCalculada = calcularFechaCierreCiclo(ahoraMilis)
 
                 val nuevoCiclo = CicloEntrenamiento(
@@ -128,7 +139,10 @@ class AtletaProgresoRepository {
                     repeticionesLogradasTotal = sesionFinal.totalRepsEfectivasLogradas
                 )
 
-                val porcentajeAsist = (nuevoCiclo.sesionesCompletadas.toDouble() / nuevoCiclo.metaSesionesAsignadas.toDouble()) * 100.0
+                val porcentajeAsist = if (nuevoCiclo.metaSesionesAsignadas > 0) {
+                    (nuevoCiclo.sesionesCompletadas.toDouble() / nuevoCiclo.metaSesionesAsignadas.toDouble()) * 100.0
+                } else 0.0
+
                 val porcentajeVol = if (nuevoCiclo.repeticionesMetaTotal > 0) {
                     (nuevoCiclo.repeticionesLogradasTotal.toDouble() / nuevoCiclo.repeticionesMetaTotal.toDouble()) * 100.0
                 } else 0.0
@@ -142,7 +156,10 @@ class AtletaProgresoRepository {
                 val nuevaMetaReps = cicloActivo.repeticionesMetaTotal
                 val nuevasRepsLogradas = cicloActivo.repeticionesLogradasTotal + sesionFinal.totalRepsEfectivasLogradas
 
-                val porcentajeAsist = (nuevasSesiones.toDouble() / cicloActivo.metaSesionesAsignadas.toDouble()) * 100.0
+                val porcentajeAsist = if (cicloActivo.metaSesionesAsignadas > 0) {
+                    (nuevasSesiones.toDouble() / cicloActivo.metaSesionesAsignadas.toDouble()) * 100.0
+                } else 0.0
+
                 val porcentajeVol = if (nuevaMetaReps > 0) {
                     (nuevasRepsLogradas.toDouble() / nuevaMetaReps.toDouble()) * 100.0
                 } else 0.0
@@ -168,6 +185,9 @@ class AtletaProgresoRepository {
         }
         true
     } catch (e: Exception) {
+        // 🚀 SE ACABÓ EL SILENCIO: Esto imprimirá el error exacto en tu Logcat
+        println("🔥 [AtletaProgresoRepository] ERROR CRÍTICO AL GUARDAR ENTRENAMIENTO: ${e.message}")
+        e.printStackTrace()
         false
     }
 

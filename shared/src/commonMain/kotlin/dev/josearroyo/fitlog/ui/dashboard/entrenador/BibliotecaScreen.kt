@@ -1,15 +1,18 @@
 package dev.josearroyo.fitlog.ui.dashboard.entrenador
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.material3.TabRowDefaults.tabIndicatorOffset
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -38,7 +41,8 @@ fun BibliotecaScreen(
     val viewModel: BibliotecaViewModel = viewModel { BibliotecaViewModel() }
     val state by viewModel.state.collectAsState()
 
-    var menuExpandidoFiltro by remember { mutableStateOf(false) }
+    // 🟢 CORREGIDO: rememberSaveable blinda el estado del filtro contra recomposiciones de teclado
+    var menuExpandidoFiltro by rememberSaveable { mutableStateOf(false) }
 
     LaunchedEffect(state.tabSeleccionado) {
         if (state.tabSeleccionado == 0) {
@@ -54,7 +58,6 @@ fun BibliotecaScreen(
             .background(FondoOscuro)
             .padding(16.dp)
     ) {
-        // Selector de Pestañas (Tabs al estilo FitLog)
         TabRow(
             selectedTabIndex = state.tabSeleccionado,
             containerColor = FondoTarjeta,
@@ -85,9 +88,7 @@ fun BibliotecaScreen(
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        // Contenido dinámico según el Tab Activo
         if (state.tabSeleccionado == 0) {
-            // --- PESTAÑA: EJERCICIOS ---
             Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                 OutlinedTextField(
                     value = state.textoBusqueda,
@@ -111,9 +112,12 @@ fun BibliotecaScreen(
                     }
                     DropdownMenu(expanded = menuExpandidoFiltro, onDismissRequest = { menuExpandidoFiltro = false }, modifier = Modifier.background(FondoTarjeta)) {
                         DropdownMenuItem(text = { Text("Todos los grupos", color = Color.White) }, onClick = { viewModel.filtrarEjercicios(state.textoBusqueda, null); menuExpandidoFiltro = false })
-                        GrupoMuscular.values().forEach { grupo ->
+
+                        // 🟢 CORREGIDO: Uso de .entries sobre .values() para proteger la memoria RAM
+                        GrupoMuscular.entries.forEach { grupo ->
+                            val nombreFormateado = grupo.name.replace("_", " ").lowercase().replaceFirstChar { it.uppercase() }
                             DropdownMenuItem(
-                                text = { Text(grupo.name.replace("_", " "), color = Color.White) },
+                                text = { Text(nombreFormateado, color = Color.White) },
                                 onClick = { viewModel.filtrarEjercicios(state.textoBusqueda, grupo); menuExpandidoFiltro = false }
                             )
                         }
@@ -126,8 +130,9 @@ fun BibliotecaScreen(
             if (state.isLoading) {
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator(color = NaranjaAcento) }
             } else {
+                // 🟢 CORREGIDO: Se inyecta key única para optimizar el reciclaje de las tarjetas de fuerza
                 LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.weight(1f)) {
-                    items(state.listaFiltrada) { ejercicio ->
+                    items(state.listaFiltrada, key = { it.id }) { ejercicio ->
                         CardEjercicioRow(
                             ejercicio = ejercicio,
                             onEdit = { onNavigateToEditEjercicio(entrenadorId, ejercicio.id) },
@@ -148,12 +153,12 @@ fun BibliotecaScreen(
                 }
             }
         } else {
-            // --- PESTAÑA: PLANTILLAS ---
             if (state.isLoadingPlantillas) {
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator(color = NaranjaAcento) }
             } else {
+                // 🟢 CORREGIDO: Llave key explícita para evitar desfase de índices en la bitácora de plantillas
                 LazyColumn(verticalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.weight(1f)) {
-                    items(state.listaPlantillas) { plantilla ->
+                    items(state.listaPlantillas, key = { it.id }) { plantilla ->
                         CardPlantillaRow(
                             plantilla = plantilla,
                             onEdit = { onNavigateToEditPlantilla(entrenadorId, plantilla.id) },
@@ -179,12 +184,13 @@ fun BibliotecaScreen(
 
 @Composable
 fun CardEjercicioRow(ejercicio: Ejercicio, onEdit: () -> Unit, onDelete: () -> Unit) {
-    var menuOpen by remember { mutableStateOf(false) }
+    var menuOpen by rememberSaveable { mutableStateOf(false) }
     Card(modifier = Modifier.fillMaxWidth(), colors = CardDefaults.cardColors(containerColor = FondoTarjeta), shape = RoundedCornerShape(12.dp)) {
         Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f)) {
                 Text(ejercicio.nombre, color = Color.White, fontWeight = FontWeight.Bold, fontSize = 15.sp)
-                Text(ejercicio.grupoMuscular.name.replace("_", " "), color = NaranjaAcento, fontSize = 12.sp)
+                val grupoFormateado = remember(ejercicio.grupoMuscular) { ejercicio.grupoMuscular.name.replace("_", " ").lowercase().replaceFirstChar { it.uppercase() } }
+                Text(grupoFormateado, color = NaranjaAcento, fontSize = 12.sp)
             }
             if (ejercicio.esPersonalizado) {
                 Box {
@@ -203,7 +209,7 @@ fun CardEjercicioRow(ejercicio: Ejercicio, onEdit: () -> Unit, onDelete: () -> U
 
 @Composable
 fun CardPlantillaRow(plantilla: PlantillaRutina, onEdit: () -> Unit, onDelete: () -> Unit) {
-    var menuOpen by remember { mutableStateOf(false) }
+    var menuOpen by rememberSaveable { mutableStateOf(false) }
     Card(modifier = Modifier.fillMaxWidth(), colors = CardDefaults.cardColors(containerColor = FondoTarjeta), shape = RoundedCornerShape(12.dp)) {
         Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f)) {

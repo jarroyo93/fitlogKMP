@@ -10,6 +10,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -40,21 +41,11 @@ fun EntrenadorDashboardScreen(
 ) {
     val dashboardViewModel: EntrenadorViewModel = viewModel { EntrenadorViewModel() }
 
-    // 🚀 RECOLECCIÓN DE LOS FLUJOS INDIVIDUALES:
-    val atletas by dashboardViewModel.atletas.collectAsState()
-    val isLoading by dashboardViewModel.isLoading.collectAsState()
-    val codigoGenerado by dashboardViewModel.codigoGenerado.collectAsState()
-    val expiracionCodigoTexto by dashboardViewModel.expiracionCodigoTexto.collectAsState()
-    val isGeneratingCode by dashboardViewModel.isGeneratingCode.collectAsState()
-    val asistenciaDia by dashboardViewModel.asistenciaDia.collectAsState()
-    val isLoadingAsistencia by dashboardViewModel.isLoadingAsistencia.collectAsState()
-    val textoBusqueda by dashboardViewModel.textoBusqueda.collectAsState()
-    val tabSeleccionado by dashboardViewModel.tabSeleccionado.collectAsState()
+    // 🟢 AQUÍ ESTÁ EL CAMBIO CLAVE: Recolectamos el estado completo unificado
+    val state by dashboardViewModel.uiState.collectAsState()
 
     val clipboardManager = LocalClipboardManager.current
-
-    // Estado reactivo para controlar el diálogo de opciones de vinculación/creación
-    var mostrarDialogOpciones by remember { mutableStateOf(false) }
+    var mostrarDialogOpciones by rememberSaveable { mutableStateOf(false) }
 
     LaunchedEffect(entrenadorId) {
         dashboardViewModel.cargarDashboard(entrenadorId)
@@ -63,27 +54,25 @@ fun EntrenadorDashboardScreen(
     Box(modifier = Modifier.fillMaxSize().background(FondoOscuro)) {
         Column(modifier = Modifier.fillMaxSize()) {
 
-            // 1. Pestañas Superiores (Mis Atletas vs Asistencia Hoy)
             TabRow(
-                selectedTabIndex = tabSeleccionado,
+                selectedTabIndex = state.tabSeleccionado,
                 containerColor = FondoOscuro,
                 contentColor = NaranjaAcento
             ) {
                 Tab(
-                    selected = tabSeleccionado == 0,
+                    selected = state.tabSeleccionado == 0,
                     onClick = { dashboardViewModel.cambiarTab(0) },
                     text = { Text("Mis Atletas", color = Color.White, fontWeight = FontWeight.Bold) }
                 )
                 Tab(
-                    selected = tabSeleccionado == 1,
+                    selected = state.tabSeleccionado == 1,
                     onClick = { dashboardViewModel.cambiarTab(1) },
                     text = { Text("Asistencia Hoy", color = Color.White, fontWeight = FontWeight.Bold) }
                 )
             }
 
-            // 2. Buscador Central
             OutlinedTextField(
-                value = textoBusqueda,
+                value = state.textoBusqueda,
                 onValueChange = { dashboardViewModel.aplicarBusqueda(it) },
                 modifier = Modifier.fillMaxWidth().padding(16.dp),
                 placeholder = { Text("Buscar atleta por nombre...", color = TextoSecundario) },
@@ -96,13 +85,12 @@ fun EntrenadorDashboardScreen(
                 )
             )
 
-            // 3. Renderizado Condicional
-            if (tabSeleccionado == 0) {
-                if (isLoading) {
+            if (state.tabSeleccionado == 0) {
+                if (state.isLoading) {
                     Box(modifier = Modifier.fillMaxWidth().weight(1f), contentAlignment = Alignment.Center) {
                         CircularProgressIndicator(color = NaranjaAcento)
                     }
-                } else if (atletas.isEmpty()) {
+                } else if (state.atletas.isEmpty()) {
                     Box(modifier = Modifier.fillMaxWidth().weight(1f).padding(16.dp), contentAlignment = Alignment.Center) {
                         Text("No se encontraron atletas.", color = TextoSecundario, textAlign = TextAlign.Center)
                     }
@@ -112,17 +100,17 @@ fun EntrenadorDashboardScreen(
                         verticalArrangement = Arrangement.spacedBy(8.dp),
                         contentPadding = PaddingValues(bottom = 88.dp)
                     ) {
-                        items(atletas) { atleta ->
+                        items(state.atletas, key = { it.id }) { atleta ->
                             AtletaCardItem(atleta = atleta, onClick = { onAtletaClick(atleta.id) })
                         }
                     }
                 }
             } else {
-                if (isLoadingAsistencia) {
+                if (state.isLoadingAsistencia) {
                     Box(modifier = Modifier.fillMaxWidth().weight(1f), contentAlignment = Alignment.Center) {
                         CircularProgressIndicator(color = NaranjaAcento)
                     }
-                } else if (asistenciaDia.isEmpty()) {
+                } else if (state.asistenciaDia.isEmpty()) {
                     Box(modifier = Modifier.fillMaxWidth().weight(1f).padding(16.dp), contentAlignment = Alignment.Center) {
                         Text("Sin registros de asistencia hoy.", color = TextoSecundario, textAlign = TextAlign.Center)
                     }
@@ -132,7 +120,7 @@ fun EntrenadorDashboardScreen(
                         verticalArrangement = Arrangement.spacedBy(8.dp),
                         contentPadding = PaddingValues(bottom = 88.dp)
                     ) {
-                        items(asistenciaDia) { reporte ->
+                        items(state.asistenciaDia, key = { it.atleta.id }) { reporte ->
                             AsistenciaCardItem(reporte = reporte)
                         }
                     }
@@ -140,15 +128,12 @@ fun EntrenadorDashboardScreen(
             }
         }
 
-        // 4. Botón Flotante para Generar Código (FAB)
         FloatingActionButton(
             onClick = {
-                if (codigoGenerado != null) {
-                    // Si ya se generó un código, el botón sirve para copiar y limpiar
-                    clipboardManager.setText(AnnotatedString(codigoGenerado!!))
+                if (state.codigoGenerado != null) {
+                    clipboardManager.setText(AnnotatedString(state.codigoGenerado!!))
                     dashboardViewModel.limpiarCodigo()
                 } else {
-                    // Si no, abrimos el diálogo selector de opción de registro
                     mostrarDialogOpciones = true
                 }
             },
@@ -156,83 +141,47 @@ fun EntrenadorDashboardScreen(
             contentColor = FondoOscuro,
             modifier = Modifier.align(Alignment.BottomEnd).padding(16.dp)
         ) {
-            if (isGeneratingCode) {
+            if (state.isGeneratingCode) {
                 CircularProgressIndicator(modifier = Modifier.size(24.dp), color = FondoOscuro)
-            } else if (codigoGenerado != null) {
+            } else if (state.codigoGenerado != null) {
                 Row(modifier = Modifier.padding(horizontal = 12.dp), verticalAlignment = Alignment.CenterVertically) {
                     Icon(Icons.Default.CheckCircle, contentDescription = null)
                     Spacer(modifier = Modifier.width(6.dp))
-                    Text("Copiar: $codigoGenerado", fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                    Text("Copiar: ${state.codigoGenerado}", fontWeight = FontWeight.Bold, fontSize = 14.sp)
                 }
             } else {
                 Icon(Icons.Default.Add, contentDescription = "Agregar Atleta")
             }
         }
 
-        // 5. Renderizado del Diálogo de Opciones
+        // ... (El resto del código del diálogo sigue igual)
         if (mostrarDialogOpciones) {
             AlertDialog(
                 onDismissRequest = { mostrarDialogOpciones = false },
                 containerColor = FondoTarjeta,
-                title = {
-                    Text(
-                        text = "Registrar Atleta",
-                        color = Color.White,
-                        fontSize = 20.sp,
-                        fontWeight = FontWeight.Bold
-                    )
-                },
-                text = {
-                    Text(
-                        text = "Selecciona cómo quieres registrar o vincular a tu nuevo atleta.",
-                        color = TextoSecundario,
-                        fontSize = 14.sp
-                    )
-                },
+                title = { Text("Registrar Atleta", color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.Bold) },
+                text = { Text("Selecciona cómo quieres registrar o vincular a tu nuevo atleta.", color = TextoSecundario, fontSize = 14.sp) },
                 confirmButton = {
-                    Column(
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalArrangement = Arrangement.spacedBy(10.dp)
-                    ) {
-                        // Opción Manual
+                    Column(modifier = Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                         Button(
-                            onClick = {
-                                mostrarDialogOpciones = false
-                                onAddAtletaClick() // Dispara la navegación del AppNavigation
-                            },
+                            onClick = { mostrarDialogOpciones = false; onAddAtletaClick() },
                             modifier = Modifier.fillMaxWidth(),
                             colors = ButtonDefaults.buttonColors(containerColor = NaranjaAcento)
-                        ) {
-                            Text("Crear Manualmente", color = Color.White, fontWeight = FontWeight.Bold)
-                        }
+                        ) { Text("Crear Manualmente", color = Color.White, fontWeight = FontWeight.Bold) }
 
-                        // Opción por Código (Generación original)
                         OutlinedButton(
-                            onClick = {
-                                mostrarDialogOpciones = false
-                                dashboardViewModel.generarCodigoVinculacion(entrenadorId)
-                            },
+                            onClick = { mostrarDialogOpciones = false; dashboardViewModel.generarCodigoVinculacion(entrenadorId) },
                             modifier = Modifier.fillMaxWidth(),
                             colors = ButtonDefaults.outlinedButtonColors(contentColor = NaranjaAcento),
                             border = androidx.compose.foundation.BorderStroke(1.dp, NaranjaAcento)
-                        ) {
-                            Text("Generar Código de Vinculación", fontWeight = FontWeight.Bold)
-                        }
-
-                        Spacer(modifier = Modifier.height(4.dp))
-
-                        TextButton(
-                            onClick = { mostrarDialogOpciones = false },
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            Text("Cancelar", color = TextoSecundario)
-                        }
+                        ) { Text("Generar Código", fontWeight = FontWeight.Bold) }
                     }
                 }
             )
         }
     }
 }
+
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable

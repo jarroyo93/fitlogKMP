@@ -12,6 +12,7 @@ import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.List
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -87,7 +88,8 @@ fun HistorialValoracionScreen(
                 contentPadding = PaddingValues(16.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                items(state.lista) { valoracion ->
+                // 🟢 CORREGIDO: Se añade key basado en marca de tiempo única para optimizar recomposiciones
+                items(state.lista, key = { it.fechaRegistro }) { valoracion ->
                     ValoracionCard(valoracion)
                 }
             }
@@ -97,7 +99,8 @@ fun HistorialValoracionScreen(
 
 @Composable
 fun ValoracionCard(v: ValoracionFisica) {
-    var expandido by remember { mutableStateOf(false) }
+    // 🟢 CORREGIDO: rememberSaveable retiene el estado de expansión al hacer scroll fuera de pantalla
+    var expandido by rememberSaveable { mutableStateOf(false) }
 
     Card(
         modifier = Modifier.fillMaxWidth(),

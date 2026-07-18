@@ -62,10 +62,14 @@ fun PerfilAtletaScreen(
         } else {
             val u = usuario
 
-            val edad = remember(u.fechaNacimiento) {
-                if (u.fechaNacimiento <= 0L) 0 else {
+            // 🟢 CORREGIDO: Evita renderizar marcas de tiempo 0L como fechas de nacimiento válidas de 1970
+            val fechaNacimientoConEdadTexto = remember(u.fechaNacimiento) {
+                if (u.fechaNacimiento <= 0L) {
+                    "No registrada"
+                } else {
                     val diferenciaMilis = getCurrentTimeMillis() - u.fechaNacimiento
-                    (diferenciaMilis / 31557600000L).toInt()
+                    val edadCalculada = (diferenciaMilis / 31557600000L).toInt()
+                    "${formatearFechaHistorial(u.fechaNacimiento)} ($edadCalculada años)"
                 }
             }
 
@@ -103,7 +107,7 @@ fun PerfilAtletaScreen(
                         Text("Datos de Identificación", color = NaranjaAcento, fontWeight = FontWeight.Bold, fontSize = 14.sp)
                         DatoFila("Documento de identidad", "${u.tipoDocumento} ${u.numeroDocumento}")
                         DatoFila("Correo Electrónico", u.correo)
-                        DatoFila("Fecha de Nacimiento", "${formatearFechaHistorial(u.fechaNacimiento)} ($edad años)")
+                        DatoFila("Fecha de Nacimiento", fechaNacimientoConEdadTexto) // 🟢 Pasamos la cadena sanitizada
                         DatoFila("Nacionalidad", u.nacionalidad)
                         DatoFila("Tipo de Sangre", u.tipoSangre)
                     }

@@ -12,6 +12,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -20,10 +21,9 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import dev.josearroyo.fitlog.data.model.ElementoRutina
-import dev.josearroyo.fitlog.ui.dashboard.EditorSeriesPrescritas // Asegúrate de que este import sea correcto
+import dev.josearroyo.fitlog.ui.dashboard.EditorSeriesPrescritas
 import dev.josearroyo.fitlog.viewmodel.entrenador.AddPlantillaViewModel
 
-// Constantes locales para evitar errores de referencia de paquetes
 private val FondoOscuro = Color(0xFF241B3C)
 private val NaranjaAcento = Color(0xFFFF9F6D)
 private val FondoTarjeta = Color(0xFF2F254E)
@@ -38,7 +38,9 @@ fun AddPlantillaScreen(
 ) {
     val viewModel: AddPlantillaViewModel = viewModel { AddPlantillaViewModel() }
     val state by viewModel.state.collectAsState()
-    var showBottomSheet by remember { mutableStateOf(false) }
+
+    // 🟢 CORREGIDO: Uso de rememberSaveable para que no se cierre el bottom sheet accidentalmente
+    var showBottomSheet by rememberSaveable { mutableStateOf(false) }
 
     LaunchedEffect(Unit) { viewModel.cargarPlantillaSiExiste(plantillaId, entrenadorId) }
     LaunchedEffect(state.isGuardado) { if (state.isGuardado) onBack() }
@@ -87,12 +89,16 @@ fun AddPlantillaScreen(
             Text("Ejercicios seleccionados", color = Color.White, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
             Spacer(modifier = Modifier.height(8.dp))
 
-            // 🔥 CORRECCIÓN: Aquí llamamos al componente correcto ElementoRutinaCard
-            LazyColumn(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(12.dp), contentPadding = PaddingValues(bottom = 80.dp)) {
-                itemsIndexed(state.ejerciciosEnCarrito) { index, elemento ->
+            LazyColumn(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(12.dp),
+                contentPadding = PaddingValues(bottom = 80.dp)
+            ) {
+                // 🟢 CORREGIDO: Se inyecta un identificador key estable basado en el nombre o id para que no colapse el reordenamiento
+                itemsIndexed(state.ejerciciosEnCarrito, key = { _, item -> item.nombreEjercicio }) { index, elemento ->
                     ElementoRutinaCard(
                         elemento = elemento,
-                        index = index, // Pasamos el índice
+                        index = index,
                         onUpdate = { elementoModificado -> viewModel.actualizarElemento(index, elementoModificado) },
                         onMove = { dir -> viewModel.moverEjercicio(index, dir) },
                         onDelete = { viewModel.eliminarEjercicio(index) },
@@ -105,7 +111,7 @@ fun AddPlantillaScreen(
     }
 
     if (showBottomSheet) {
-        var searchQuery by remember { mutableStateOf("") }
+        var searchQuery by rememberSaveable { mutableStateOf("") }
         val ejerciciosFiltrados = state.bibliotecaDisponible.filter { it.nombre.contains(searchQuery, ignoreCase = true) }
 
         ModalBottomSheet(onDismissRequest = { showBottomSheet = false }, containerColor = FondoTarjeta) {
@@ -120,7 +126,7 @@ fun AddPlantillaScreen(
                 Spacer(Modifier.height(16.dp))
 
                 LazyColumn {
-                    items(ejerciciosFiltrados) { ejercicio ->
+                    items(ejerciciosFiltrados, key = { it.nombre }) { ejercicio ->
                         ListItem(
                             headlineContent = { Text(ejercicio.nombre, color = Color.White, fontWeight = FontWeight.Medium) },
                             modifier = Modifier.clickable { viewModel.agregarEjercicioAlCarrito(ejercicio); showBottomSheet = false },
@@ -145,7 +151,6 @@ fun ElementoRutinaCard(
 ) {
     Card(modifier = Modifier.fillMaxWidth(), colors = CardDefaults.cardColors(containerColor = FondoTarjeta), shape = RoundedCornerShape(16.dp)) {
         Column(modifier = Modifier.padding(16.dp)) {
-            // Fila de cabecera con botones de reordenamiento
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(elemento.nombreEjercicio, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = NaranjaAcento, modifier = Modifier.weight(1f))
 

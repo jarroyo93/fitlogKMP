@@ -5,6 +5,7 @@ import dev.gitlive.firebase.firestore.firestore
 import dev.gitlive.firebase.firestore.where
 import dev.josearroyo.fitlog.data.model.Ejercicio
 import dev.josearroyo.fitlog.data.model.PlantillaRutina
+import kotlin.uuid.Uuid
 
 class ExerciseRepository {
     private val db = Firebase.firestore
@@ -12,17 +13,21 @@ class ExerciseRepository {
     private val customExercisesRef = db.collection("ejercicios_personalizados")
     private val templatesRef = db.collection("plantillas_rutinas")
 
-    // ==========================================
-    // BLOQUE 1: EJERCICIOS
-    // ==========================================
     suspend fun obtenerBibliotecaCompleta(entrenadorId: String): List<Ejercicio> = try {
-        val globales = globalExercisesRef.get().documents.map { it.data<Ejercicio>() }
+        val globales = globalExercisesRef.get().documents.map { doc ->
+            doc.data<Ejercicio>().copy(id = doc.id)
+        }
+
         val personalizadosSnapshot = customExercisesRef.where("creadorId", equalTo = entrenadorId).get()
         val listaPersonalizados = personalizadosSnapshot.documents.map { doc ->
             doc.data<Ejercicio>().copy(id = doc.id)
         }
+
         (globales + listaPersonalizados).filter { it.activo }
-    } catch (e: Exception) { emptyList() }
+    } catch (e: Exception) {
+        println("🔥 [ExerciseRepository] Error en obtenerBibliotecaCompleta: ${e.message}")
+        emptyList()
+    }
 
     suspend fun obtenerEjercicioPorId(ejercicioId: String): Ejercicio? = try {
         val doc = customExercisesRef.document(ejercicioId).get()
@@ -30,7 +35,10 @@ class ExerciseRepository {
     } catch (e: Exception) { null }
 
     suspend fun guardarEjercicioPersonalizado(ejercicio: Ejercicio): Boolean = try {
-        customExercisesRef.add(ejercicio)
+        val nuevoId = Uuid.random().toString()
+        val docRef = customExercisesRef.document(nuevoId)
+        val ejercicioConId = ejercicio.copy(id = nuevoId)
+        docRef.set(ejercicioConId)
         true
     } catch (e: Exception) { false }
 
@@ -45,9 +53,6 @@ class ExerciseRepository {
         true
     } catch (e: Exception) { false }
 
-    // ==========================================
-    // BLOQUE 2: PLANTILLAS
-    // ==========================================
     suspend fun obtenerPlantillasDelEntrenador(entrenadorId: String): List<PlantillaRutina> = try {
         val snapshot = templatesRef.where("entrenadorId", equalTo = entrenadorId).get()
         snapshot.documents.map { doc ->
@@ -60,13 +65,17 @@ class ExerciseRepository {
         if (doc.exists) doc.data<PlantillaRutina>().copy(id = doc.id) else null
     } catch (e: Exception) { null }
 
-    // 🚀 NUEVO: Guardar Plantilla (GitLive suspende por defecto)
+    // 🚀 CORRECCIÓN: Cambiado de .add() a .set() preventivo para asegurar consistencia de ID
     suspend fun guardarPlantillaRutina(plantilla: PlantillaRutina): Boolean = try {
-        templatesRef.add(plantilla)
+        val nuevoId = Uuid.random().toString()
+        val plantillaConId = plantilla.copy(id = nuevoId)
+        templatesRef.document(nuevoId).set(plantillaConId)
         true
-    } catch (e: Exception) { false }
+    } catch (e: Exception) {
+        println("🔥 [ExerciseRepository] Error al guardar plantilla: ${e.message}")
+        false
+    }
 
-    // 🚀 NUEVO: Actualizar Plantilla
     suspend fun actualizarPlantilla(plantillaId: String, datos: Map<String, Any?>): Boolean = try {
         val pairs = datos.map { it.key to it.value }.toTypedArray()
         templatesRef.document(plantillaId).update(*pairs)

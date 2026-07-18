@@ -37,7 +37,8 @@ fun EntrenarScreen(
     onBack: () -> Unit,
     onFinish: () -> Unit
 ) {
-    val viewModel: EntrenarViewModel = viewModel()
+    // 🟢 CORREGIDO: Inicialización explícita compatible con la arquitectura DI KMP
+    val viewModel: EntrenarViewModel = viewModel { EntrenarViewModel() }
     val state by viewModel.state.collectAsState()
     var mostrarConfirmacion by remember { mutableStateOf(false) }
 
@@ -127,6 +128,12 @@ fun EntrenarScreen(
             val sesion = state.sesionEnProgreso
 
             if (rutina != null && diaActual != null && sesion.ejerciciosRealizados.isNotEmpty()) {
+
+                // 🟢 CORREGIDO: Aislamos el ordenamiento visual para no romper el mapeo de datos con el ViewModel
+                val ejerciciosOrdenados = remember(diaActual.ejercicios) {
+                    diaActual.ejercicios.sortedBy { it.ordenSecuencia }
+                }
+
                 LazyColumn(
                     modifier = Modifier
                         .fillMaxSize()
@@ -192,16 +199,22 @@ fun EntrenarScreen(
                         }
                     }
 
-                    itemsIndexed(diaActual.ejercicios.sortedBy { it.ordenSecuencia }) { index, asignado ->
-                        val realizado = sesion.ejerciciosRealizados.getOrNull(index)
+                    // Iteración segura basada en el árbol de dependencias estable de claves hash
+                    itemsIndexed(ejerciciosOrdenados, key = { _, ej -> ej.nombre }) { _, asignado ->
+                        // 🟢 CORREGIDO: Buscamos el índice transaccional real para mantener la integridad de los datos
+                        val realIndex = remember(diaActual.ejercicios, asignado) {
+                            diaActual.ejercicios.indexOf(asignado)
+                        }
+
+                        val realizado = sesion.ejerciciosRealizados.getOrNull(realIndex)
                         if (realizado != null) {
                             EjercicioInteractivoCard(
                                 ejercicioAsignado = asignado,
                                 ejercicioRealizado = realizado,
-                                onActualizarSerie = { serieIndex, peso, reps -> viewModel.actualizarSerie(index, serieIndex, peso, reps) },
-                                onActualizarRpe = { serieIndex, rpe -> viewModel.actualizarRpe(index, serieIndex, rpe) },
-                                onActualizarNota = { nota -> viewModel.actualizarNotaAtleta(index, nota) },
-                                onToggleSaltar = { fue, just -> viewModel.toggleSaltarEjercicio(index, fue, just) }
+                                onActualizarSerie = { serieIndex, peso, reps -> viewModel.actualizarSerie(realIndex, serieIndex, peso, reps) },
+                                onActualizarRpe = { serieIndex, rpe -> viewModel.actualizarRpe(realIndex, serieIndex, rpe) },
+                                onActualizarNota = { nota -> viewModel.actualizarNotaAtleta(realIndex, nota) },
+                                onToggleSaltar = { fue, just -> viewModel.toggleSaltarEjercicio(realIndex, fue, just) }
                             )
                         }
                     }
@@ -294,57 +307,60 @@ fun EjercicioInteractivoCard(
                         TipoSerie.EFECTIVA -> "${serie.numeroSerie}"
                     }
 
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(vertical = 4.dp)
-                            .background(FondoOscuro.copy(alpha = 0.4f), RoundedCornerShape(8.dp))
-                            .padding(vertical = 4.dp, horizontal = 2.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text(textoSerie, modifier = Modifier.weight(0.6f), fontWeight = FontWeight.Black, color = colorTextoSerie, style = MaterialTheme.typography.bodySmall, textAlign = TextAlign.Center)
+                    // 🟢 CORREGIDO: Envoltura bajo clave de ejecución única para blindar la retención de foco táctil del sistema
+                    key(sIndex) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 4.dp)
+                                .background(FondoOscuro.copy(alpha = 0.4f), RoundedCornerShape(8.dp))
+                                .padding(vertical = 4.dp, horizontal = 2.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(textoSerie, modifier = Modifier.weight(0.6f), fontWeight = FontWeight.Black, color = colorTextoSerie, style = MaterialTheme.typography.bodySmall, textAlign = TextAlign.Center)
 
-                        OutlinedTextField(
-                            value = if (serie.pesoKg <= 0.0) "" else if (serie.pesoKg % 1.0 == 0.0) serie.pesoKg.toInt().toString() else serie.pesoKg.toString(),
-                            onValueChange = { newValue ->
-                                if (newValue.isEmpty() || newValue.matches(Regex("^\\d*[.,]?\\d*\$"))) {
-                                    onActualizarSerie(sIndex, newValue.replace(",", ".").toDoubleOrNull() ?: 0.0, serie.repeticionesLogradas)
-                                }
-                            },
-                            modifier = Modifier.weight(1f).padding(horizontal = 2.dp).heightIn(min = 56.dp),
-                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal, imeAction = ImeAction.Next),
-                            singleLine = true,
-                            textStyle = LocalTextStyle.current.copy(textAlign = TextAlign.Center, color = Color.White, fontWeight = FontWeight.Bold),
-                            colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = NaranjaAcento, unfocusedBorderColor = TextoSecundario.copy(alpha = 0.2f), focusedContainerColor = FondoTarjeta, unfocusedContainerColor = FondoTarjeta)
-                        )
-
-                        OutlinedTextField(
-                            value = if (serie.repeticionesLogradas <= 0) "" else serie.repeticionesLogradas.toString(),
-                            onValueChange = { newValue ->
-                                if (newValue.isEmpty() || newValue.all { it.isDigit() }) {
-                                    onActualizarSerie(sIndex, serie.pesoKg, newValue.toIntOrNull() ?: 0)
-                                }
-                            },
-                            modifier = Modifier.weight(0.8f).padding(horizontal = 2.dp).heightIn(min = 56.dp),
-                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Next),
-                            singleLine = true,
-                            textStyle = LocalTextStyle.current.copy(textAlign = TextAlign.Center, color = Color.White, fontWeight = FontWeight.Bold),
-                            colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = NaranjaAcento, unfocusedBorderColor = TextoSecundario.copy(alpha = 0.2f), focusedContainerColor = FondoTarjeta, unfocusedContainerColor = FondoTarjeta)
-                        )
-
-                        val rpeColor = obtenerColorRpe(serie.rpe ?: 0)
-                        ElevatedFilterChip(
-                            selected = serie.rpe != null,
-                            onClick = { serieSeleccionadaParaRpe = sIndex; rpeActualSeleccionado = serie.rpe ?: 8; mostrarRpeSheet = true },
-                            label = { Text(if (serie.rpe != null) "${serie.rpe}" else "-", fontWeight = FontWeight.Black) },
-                            modifier = Modifier.weight(0.8f).padding(start = 4.dp),
-                            colors = FilterChipDefaults.elevatedFilterChipColors(
-                                selectedContainerColor = rpeColor.copy(alpha = 0.2f),
-                                selectedLabelColor = rpeColor,
-                                containerColor = FondoTarjeta,
-                                labelColor = TextoSecundario
+                            OutlinedTextField(
+                                value = if (serie.pesoKg <= 0.0) "" else if (serie.pesoKg % 1.0 == 0.0) serie.pesoKg.toInt().toString() else serie.pesoKg.toString(),
+                                onValueChange = { newValue ->
+                                    if (newValue.isEmpty() || newValue.matches(Regex("^\\d*[.,]?\\d*\$"))) {
+                                        onActualizarSerie(sIndex, newValue.replace(",", ".").toDoubleOrNull() ?: 0.0, serie.repeticionesLogradas)
+                                    }
+                                },
+                                modifier = Modifier.weight(1f).padding(horizontal = 2.dp).heightIn(min = 56.dp),
+                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal, imeAction = ImeAction.Next),
+                                singleLine = true,
+                                textStyle = LocalTextStyle.current.copy(textAlign = TextAlign.Center, color = Color.White, fontWeight = FontWeight.Bold),
+                                colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = NaranjaAcento, unfocusedBorderColor = TextoSecundario.copy(alpha = 0.2f), focusedContainerColor = FondoTarjeta, unfocusedContainerColor = FondoTarjeta)
                             )
-                        )
+
+                            OutlinedTextField(
+                                value = if (serie.repeticionesLogradas <= 0) "" else serie.repeticionesLogradas.toString(),
+                                onValueChange = { newValue ->
+                                    if (newValue.isEmpty() || newValue.all { it.isDigit() }) {
+                                        onActualizarSerie(sIndex, serie.pesoKg, newValue.toIntOrNull() ?: 0)
+                                    }
+                                },
+                                modifier = Modifier.weight(0.8f).padding(horizontal = 2.dp).heightIn(min = 56.dp),
+                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Next),
+                                singleLine = true,
+                                textStyle = LocalTextStyle.current.copy(textAlign = TextAlign.Center, color = Color.White, fontWeight = FontWeight.Bold),
+                                colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = NaranjaAcento, unfocusedBorderColor = TextoSecundario.copy(alpha = 0.2f), focusedContainerColor = FondoTarjeta, unfocusedContainerColor = FondoTarjeta)
+                            )
+
+                            val rpeColor = obtenerColorRpe(serie.rpe ?: 0)
+                            ElevatedFilterChip(
+                                selected = serie.rpe != null,
+                                onClick = { serieSeleccionadaParaRpe = sIndex; rpeActualSeleccionado = serie.rpe ?: 8; mostrarRpeSheet = true },
+                                label = { Text(if (serie.rpe != null) "${serie.rpe}" else "-", fontWeight = FontWeight.Black) },
+                                modifier = Modifier.weight(0.8f).padding(start = 4.dp),
+                                colors = FilterChipDefaults.elevatedFilterChipColors(
+                                    selectedContainerColor = rpeColor.copy(alpha = 0.2f),
+                                    selectedLabelColor = rpeColor,
+                                    containerColor = FondoTarjeta,
+                                    labelColor = TextoSecundario
+                                )
+                            )
+                        }
                     }
                 }
 

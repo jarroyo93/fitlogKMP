@@ -39,17 +39,8 @@ fun AddHabitosScreen(atletaId: String, onBack: () -> Unit) {
     var mostrarPickerDespertar by remember { mutableStateOf(false) }
     var mostrarPickerEntrenamiento by remember { mutableStateOf(false) }
 
-    // Control de navegación al guardar con éxito
     LaunchedEffect(state.isGuardado) {
         if (state.isGuardado) onBack()
-    }
-
-    // Recálculo automático y matemático de las horas de sueño (KMP puro)
-    LaunchedEffect(state.habitos.horaDormir, state.habitos.horaDespertar) {
-        val calculo = calcularHorasSuenoMatematico(state.habitos.horaDormir, state.habitos.horaDespertar)
-        if (calculo != state.habitos.horasSueno) {
-            viewModel.actualizarHabitos(state.habitos.copy(horasSueno = calculo))
-        }
     }
 
     Scaffold(
@@ -120,28 +111,29 @@ fun AddHabitosScreen(atletaId: String, onBack: () -> Unit) {
                     Text("Horarios y Descanso", color = NaranjaAcento, fontWeight = FontWeight.Bold, fontSize = 16.sp)
 
                     Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                        Box(modifier = Modifier.weight(1f).clickable { mostrarPickerDormir = true }) {
+                        // 🟢 CAPA INTERACTIVA TRANSPARENTE: Asegura captura de toques en iOS/Android sin bloquearse
+                        Box(modifier = Modifier.weight(1f)) {
                             OutlinedTextField(
                                 value = state.habitos.horaDormir,
                                 onValueChange = {},
                                 readOnly = true,
-                                enabled = false,
                                 label = { Text("Hora Dormir", color = TextoSecundario) },
                                 trailingIcon = { Icon(Icons.Default.AccessTime, null, tint = NaranjaAcento) },
-                                colors = OutlinedTextFieldDefaults.colors(disabledTextColor = Color.White, disabledBorderColor = TextoSecundario.copy(alpha = 0.4f))
+                                colors = OutlinedTextFieldDefaults.colors(focusedTextColor = Color.White, unfocusedTextColor = Color.White, focusedBorderColor = TextoSecundario.copy(alpha = 0.4f), unfocusedBorderColor = TextoSecundario.copy(alpha = 0.4f))
                             )
+                            Box(modifier = Modifier.matchParentSize().clickable { mostrarPickerDormir = true })
                         }
 
-                        Box(modifier = Modifier.weight(1f).clickable { mostrarPickerDespertar = true }) {
+                        Box(modifier = Modifier.weight(1f)) {
                             OutlinedTextField(
                                 value = state.habitos.horaDespertar,
                                 onValueChange = {},
                                 readOnly = true,
-                                enabled = false,
                                 label = { Text("Hora Despertar", color = TextoSecundario) },
                                 trailingIcon = { Icon(Icons.Default.AccessTime, null, tint = NaranjaAcento) },
-                                colors = OutlinedTextFieldDefaults.colors(disabledTextColor = Color.White, disabledBorderColor = TextoSecundario.copy(alpha = 0.4f))
+                                colors = OutlinedTextFieldDefaults.colors(focusedTextColor = Color.White, unfocusedTextColor = Color.White, focusedBorderColor = TextoSecundario.copy(alpha = 0.4f), unfocusedBorderColor = TextoSecundario.copy(alpha = 0.4f))
                             )
+                            Box(modifier = Modifier.matchParentSize().clickable { mostrarPickerDespertar = true })
                         }
                     }
 
@@ -149,17 +141,17 @@ fun AddHabitosScreen(atletaId: String, onBack: () -> Unit) {
 
                     Spacer(Modifier.height(4.dp))
 
-                    Box(modifier = Modifier.fillMaxWidth().clickable { mostrarPickerEntrenamiento = true }) {
+                    Box(modifier = Modifier.fillMaxWidth()) {
                         OutlinedTextField(
                             value = state.habitos.horarioEntrenamiento,
                             onValueChange = {},
                             readOnly = true,
-                            enabled = false,
                             label = { Text("Bloque de entrenamiento", color = TextoSecundario) },
                             trailingIcon = { Icon(Icons.Default.AccessTime, null, tint = NaranjaAcento) },
                             modifier = Modifier.fillMaxWidth(),
-                            colors = OutlinedTextFieldDefaults.colors(disabledTextColor = Color.White, disabledBorderColor = TextoSecundario.copy(alpha = 0.4f))
+                            colors = OutlinedTextFieldDefaults.colors(focusedTextColor = Color.White, unfocusedTextColor = Color.White, focusedBorderColor = TextoSecundario.copy(alpha = 0.4f), unfocusedBorderColor = TextoSecundario.copy(alpha = 0.4f))
                         )
+                        Box(modifier = Modifier.matchParentSize().clickable { mostrarPickerEntrenamiento = true })
                     }
 
                     OutlinedTextField(
@@ -196,12 +188,13 @@ fun AddHabitosScreen(atletaId: String, onBack: () -> Unit) {
         }
     }
 
-    // Modales de tiempo basados en Material 3 Multiplatform puro
     if (mostrarPickerDormir) {
         KmpTimePickerDialog(
             onDismiss = { mostrarPickerDormir = false },
             onConfirm = { h, m ->
-                viewModel.actualizarHabitos(state.habitos.copy(horaDormir = formatTime(h, m)))
+                val nuevaHoraDormir = formatTime(h, m)
+                val calculo = calcularHorasSuenoMatematico(nuevaHoraDormir, state.habitos.horaDespertar)
+                viewModel.actualizarHabitos(state.habitos.copy(horaDormir = nuevaHoraDormir, horasSueno = calculo))
                 mostrarPickerDormir = false
             }
         )
@@ -211,7 +204,9 @@ fun AddHabitosScreen(atletaId: String, onBack: () -> Unit) {
         KmpTimePickerDialog(
             onDismiss = { mostrarPickerDespertar = false },
             onConfirm = { h, m ->
-                viewModel.actualizarHabitos(state.habitos.copy(horaDespertar = formatTime(h, m)))
+                val nuevaHoraDespertar = formatTime(h, m)
+                val calculo = calcularHorasSuenoMatematico(state.habitos.horaDormir, nuevaHoraDespertar)
+                viewModel.actualizarHabitos(state.habitos.copy(horaDespertar = nuevaHoraDespertar, horasSueno = calculo))
                 mostrarPickerDespertar = false
             }
         )
@@ -232,8 +227,8 @@ fun AddHabitosScreen(atletaId: String, onBack: () -> Unit) {
 fun SelectorDiasSemanaEstricto(diasSeleccionados: String, onDiasCambiados: (String) -> Unit) {
     val todosLosDias = listOf("Lun", "Mar", "Mié", "Jue", "Vie", "Sáb", "Dom")
     val listaActual = remember(diasSeleccionados) {
-        if (diasSeleccionados.isEmpty()) mutableListOf()
-        else diasSeleccionados.split(", ").map { it.trim() }.toMutableList()
+        if (diasSeleccionados.isEmpty()) emptyList<String>()
+        else diasSeleccionados.split(", ").map { it.trim() }
     }
 
     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
@@ -245,8 +240,9 @@ fun SelectorDiasSemanaEstricto(diasSeleccionados: String, onDiasCambiados: (Stri
                     .aspectRatio(1f)
                     .background(color = if (estaSeleccionado) NaranjaAcento else FondoOscuro, shape = RoundedCornerShape(8.dp))
                     .clickable {
-                        if (estaSeleccionado) listaActual.remove(dia) else listaActual.add(dia)
-                        val ordenados = todosLosDias.filter { listaActual.contains(it) }
+                        // 🟢 MUTACIÓN PURA: Evitamos mutar objetos directos dentro de remember
+                        val nuevaLista = if (estaSeleccionado) listaActual - dia else listaActual + dia
+                        val ordenados = todosLosDias.filter { nuevaLista.contains(it) }
                         onDiasCambiados(ordenados.joinToString(", "))
                     },
                 contentAlignment = Alignment.Center
