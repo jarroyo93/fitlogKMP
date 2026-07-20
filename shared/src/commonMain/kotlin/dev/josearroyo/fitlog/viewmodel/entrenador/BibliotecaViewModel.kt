@@ -98,18 +98,18 @@ class BibliotecaViewModel : ViewModel() {
     }
 
     // ==========================================
-    // 🗑️ ELIMINACIÓN FÍSICA MULTIPLATAFORMA
+    // 🛡️ BORRADO LÓGICO (SOFT DELETE) MULTIPLATAFORMA
     // ==========================================
 
     fun eliminarEjercicioPersonalizado(ejercicioId: String, entrenadorId: String) {
         viewModelScope.launch {
             _state.update { it.copy(isLoading = true, error = null) }
             try {
-                repository.eliminarEjercicioFisico(ejercicioId)
+
+                repository.actualizarEjercicioPersonalizado(ejercicioId, mapOf("activo" to false))
                 cargarBiblioteca(entrenadorId)
             } catch (e: Exception) {
-                // 🟢 Ahora la UI se entera si el servidor rechazó el borrado
-                _state.update { it.copy(isLoading = false, error = e.message ?: "No se pudo eliminar el ejercicio") }
+                _state.update { it.copy(isLoading = false, error = e.message ?: "No se pudo ocultar el ejercicio") }
             }
         }
     }
@@ -121,7 +121,6 @@ class BibliotecaViewModel : ViewModel() {
                 repository.eliminarPlantillaFisica(plantillaId)
                 cargarPlantillas(entrenadorId)
             } catch (e: Exception) {
-                // 🟢 Captura el fallo de red o permisos al borrar plantillas
                 _state.update { it.copy(isLoadingPlantillas = false, error = e.message ?: "No se pudo eliminar la plantilla") }
             }
         }

@@ -54,7 +54,7 @@ class AtletaDetailViewModel(
         viewModelScope.launch {
             _state.update { it.copy(isLoading = true, error = null) }
             try {
-                // supervisorScope aísla las fallas de red individuales impidiendo crashes 🟢
+                // supervisorScope aísla las fallas de red individuales impidiendo crashes
                 supervisorScope {
                     val atletaDeferred = async { atletaRepository.obtenerUsuario(atletaId) }
                     val cicloDeferred = async { progresoRepository.obtenerCicloActivo(atletaId) }
@@ -83,7 +83,7 @@ class AtletaDetailViewModel(
                                 }
                         }.take(3)
 
-                        // 2. Procesar RPE
+                        // 2. Procesar RPE con sanado explícito contra NaN / Infinity
                         val todasLasSeriesConRpe = sesionesHistorial
                             .flatMap { it.ejerciciosRealizados }
                             .filter { !it.fueSaltado }
@@ -94,20 +94,33 @@ class AtletaDetailViewModel(
                             }
 
                         val rpeGlobal = if (todasLasSeriesConRpe.isNotEmpty()) {
-                            todasLasSeriesConRpe.map { it.second }.average()
+                            val avg = todasLasSeriesConRpe.map { it.second }.average()
+                            if (avg.isNaN() || avg.isInfinite()) 0.0 else avg
                         } else 0.0
 
                         val rpePorEj = todasLasSeriesConRpe.groupBy { it.first }
-                            .mapValues { entry -> entry.value.map { it.second }.average() }
+                            .mapValues { entry ->
+                                val avg = entry.value.map { it.second }.average()
+                                if (avg.isNaN() || avg.isInfinite()) 0.0 else avg
+                            }
                             .toList()
                             .sortedByDescending { it.second }
                             .take(3)
                             .toMap()
 
-                        // 3. Estructurar Informe
+                        // 3. Saneamiento de porcentajes del ciclo antes de enviar a la UI
+                        val asistenciaSanada = cicloActivo?.porcentajeAsistencia?.let {
+                            if (it.isNaN() || it.isInfinite()) 0.0 else it
+                        } ?: 0.0
+
+                        val volumenSanado = cicloActivo?.porcentajeVolumenGlobal?.let {
+                            if (it.isNaN() || it.isInfinite()) 0.0 else it
+                        } ?: 0.0
+
+                        // 4. Estructurar Informe seguro
                         val informe = InformeCoach(
-                            asistenciaPorcentaje = cicloActivo?.porcentajeAsistencia ?: 0.0,
-                            cumplimientoVolumen = cicloActivo?.porcentajeVolumenGlobal ?: 0.0,
+                            asistenciaPorcentaje = asistenciaSanada,
+                            cumplimientoVolumen = volumenSanado,
                             rpePromedioGlobal = rpeGlobal,
                             rpePromedioPorEjercicio = rpePorEj,
                             totalSesiones = sesionesHistorial.size,

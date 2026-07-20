@@ -119,54 +119,49 @@ class AtletaRepository {
         return auth.currentUser?.uid
     }
 
+    // AtletaRepository.kt
     suspend fun crearAtletaCompleto(
         usuario: Usuario, valoracion: ValoracionFisica, habitos: Habitos, contrasenaTemporal: String, primerPeriodo: PeriodoFacturable
-    ): Boolean = try {
+    ): Boolean {
         val snapshotCorreo = db.collection("users").where("correo", equalTo = usuario.correo).get()
         val snapshotDoc = db.collection("users").where("numeroDocumento", equalTo = usuario.numeroDocumento).where("rol", equalTo = "ATLETA").get()
 
-        if (snapshotCorreo.documents.isNotEmpty() || snapshotDoc.documents.isNotEmpty()) {
-            false
-        } else {
-            val authResult = auth.createUserWithEmailAndPassword(usuario.correo, contrasenaTemporal)
-            val authUid = authResult.user?.uid ?: throw Exception("Fallo al obtener credenciales de autenticación")
+        if (snapshotCorreo.documents.isNotEmpty()) throw Exception("El correo ya se encuentra registrado en Firestore.")
+        if (snapshotDoc.documents.isNotEmpty()) throw Exception("El documento ya se encuentra registrado en Firestore.")
 
-            val nuevoRef = usersRef.document(authUid)
-            val ahoraMilis = getCurrentTimeMillis()
+        val authResult = auth.createUserWithEmailAndPassword(usuario.correo, contrasenaTemporal)
+        val authUid = authResult.user?.uid ?: throw Exception("Fallo al obtener credenciales de autenticación")
 
-            // 🟢 OPTIMIZADO: Cambiado generador custom manual por Uuid estándar KMP
-            val idUnicoCompartido = Uuid.random().toString()
-            val valId = Uuid.random().toString()
-            val habId = Uuid.random().toString()
+        val nuevoRef = usersRef.document(authUid)
+        val ahoraMilis = getCurrentTimeMillis()
 
-            val periodoRef = nuevoRef.collection("periodos_facturables").document(idUnicoCompartido)
-            val registroContableRef = db.collection("historial_facturacion_general").document(idUnicoCompartido)
+        val idUnicoCompartido = Uuid.random().toString()
+        val valId = Uuid.random().toString()
+        val habId = Uuid.random().toString()
 
-            val batch = db.batch()
+        val periodoRef = nuevoRef.collection("periodos_facturables").document(idUnicoCompartido)
+        val registroContableRef = db.collection("historial_facturacion_general").document(idUnicoCompartido)
 
-            batch.set(nuevoRef, usuario.copy(id = authUid, authId = authUid, rol = RolUsuario.ATLETA))
+        val batch = db.batch()
 
-            val valRef = nuevoRef.collection("valoraciones").document(valId)
-            batch.set(valRef, valoracion.copy(id = valId, fechaRegistro = ahoraMilis))
+        batch.set(nuevoRef, usuario.copy(id = authUid, authId = authUid, rol = RolUsuario.ATLETA))
 
-            val habRef = nuevoRef.collection("habitos").document(habId)
-            batch.set(habRef, habitos.copy(id = habId, fechaRegistro = ahoraMilis))
+        val valRef = nuevoRef.collection("valoraciones").document(valId)
+        batch.set(valRef, valoracion.copy(id = valId, fechaRegistro = ahoraMilis))
 
-            batch.set(periodoRef, primerPeriodo.copy(id = idUnicoCompartido, atletaId = authUid, entrenadorId = usuario.entrenadorId ?: ""))
+        val habRef = nuevoRef.collection("habitos").document(habId)
+        batch.set(habRef, habitos.copy(id = habId, fechaRegistro = ahoraMilis))
 
-            val reciboContableInicial = mapOf(
-                "id" to idUnicoCompartido, "entrenadorId" to (usuario.entrenadorId ?: ""), "atletaId" to authUid,
-                "atletaNombreSnapshot" to "${usuario.nombres} ${usuario.apellidos}".trim(), "tipoPlan" to primerPeriodo.tipoPlan,
-                "fechaInicio" to primerPeriodo.fechaInicio, "fechaFin" to primerPeriodo.fechaFin, "fechaRegistroTransaccion" to ahoraMilis, "estado" to primerPeriodo.estado.name
-            )
-            batch.set(registroContableRef, reciboContableInicial)
+        batch.set(periodoRef, primerPeriodo.copy(id = idUnicoCompartido, atletaId = authUid, entrenadorId = usuario.entrenadorId ?: ""))
 
-            batch.commit()
-            true
-        }
-    } catch (e: Exception) {
-        println("🔥 Error en crearAtletaCompleto: ${e.message}")
-        e.printStackTrace()
-        false
+        val reciboContableInicial = mapOf(
+            "id" to idUnicoCompartido, "entrenadorId" to (usuario.entrenadorId ?: ""), "atletaId" to authUid,
+            "atletaNombreSnapshot" to "${usuario.nombres} ${usuario.apellidos}".trim(), "tipoPlan" to primerPeriodo.tipoPlan,
+            "fechaInicio" to primerPeriodo.fechaInicio, "fechaFin" to primerPeriodo.fechaFin, "fechaRegistroTransaccion" to ahoraMilis, "estado" to primerPeriodo.estado.name
+        )
+        batch.set(registroContableRef, reciboContableInicial)
+
+        batch.commit()
+        return true
     }
 }

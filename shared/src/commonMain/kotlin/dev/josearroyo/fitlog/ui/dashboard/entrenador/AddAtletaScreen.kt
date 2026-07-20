@@ -183,7 +183,7 @@ fun FormularioDatosPersonales(u: Usuario, confirmarCorreo: String, viewModel: Ad
                 AtletaDropdown(
                     selectedOption = u.tipoDocumento,
                     onOptionSelected = { viewModel.onEvent(AddAtletaEvent.UpdateUsuario(u.copy(tipoDocumento = it))) },
-                    options = listOf("CC", "TI", "CE", "Pasaporte"),
+                    options = listOf("CC", "TI", "CE", "Pasaporte", "PPT"),
                     label = "Tipo Doc.",
                     modifier = Modifier.weight(1.2f)
                 )
@@ -311,7 +311,6 @@ fun FormularioValoracionFisica(v: ValoracionFisica, viewModel: AddAtletaViewMode
                 }
             }
 
-            // 🟢 CORREGIDO: Migrado de .values() a .entries para optimizar memoria KMP
             AtletaDropdown(
                 selectedOption = v.nivelExperiencia.name,
                 onOptionSelected = { viewModel.onEvent(AddAtletaEvent.UpdateValoracion(v.copy(nivelExperiencia = NivelExperiencia.valueOf(it)))) },
@@ -370,24 +369,224 @@ fun SubFormularioBioimpedanciaAtleta(v: ValoracionFisica, viewModel: AddAtletaVi
     }
 }
 
+// 🟢 REFACTORIZADO: Paso #3 simplificado y visualmente estructurado
 @Composable
 fun FormularioHabitos(h: Habitos, viewModel: AddAtletaViewModel) {
-    Card(colors = CardDefaults.cardColors(containerColor = FondoTarjeta)) {
-        Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            Text("Estilo de Vida y Hábitos", style = MaterialTheme.typography.titleMedium, color = NaranjaAcento, fontWeight = FontWeight.Bold)
+    Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+        // BLOQUE 1: PLANIFICACIÓN DE ENTRENAMIENTO Y DÍAS
+        Card(
+            colors = CardDefaults.cardColors(containerColor = FondoTarjeta),
+            shape = RoundedCornerShape(16.dp)
+        ) {
+            Column(
+                modifier = Modifier.padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                Text(
+                    text = "Planificación de Entrenamiento",
+                    style = MaterialTheme.typography.titleMedium,
+                    color = NaranjaAcento,
+                    fontWeight = FontWeight.Bold
+                )
 
-            AtletaTextField(h.actividadesPrincipales, { viewModel.onEvent(AddAtletaEvent.UpdateHabitos(h.copy(actividadesPrincipales = it))) }, "Actividades Laborales / Diarias")
+                Text(
+                    text = "Días disponibles para entrenar:",
+                    color = TextoSecundario,
+                    fontSize = 13.sp
+                )
 
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                AtletaTimePickerFieldKmp(h.horaDespertar, { viewModel.onEvent(AddAtletaEvent.UpdateHabitos(h.copy(horaDespertar = it))) }, "Despertar", Modifier.weight(1f))
-                AtletaTimePickerFieldKmp(h.horaDormir, { viewModel.onEvent(AddAtletaEvent.UpdateHabitos(h.copy(horaDormir = it))) }, "Dormir", Modifier.weight(1f))
+                SelectorDiasSemanaEstricto(
+                    diasSeleccionados = h.diasDisponibles,
+                    onDiasCambiados = { nuevosDias ->
+                        viewModel.onEvent(AddAtletaEvent.UpdateHabitos(h.copy(diasDisponibles = nuevosDias)))
+                    }
+                )
+
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    AtletaTimePickerFieldKmp(
+                        value = h.horarioEntrenamiento,
+                        onTimeSelected = { hora ->
+                            viewModel.onEvent(AddAtletaEvent.UpdateHabitos(h.copy(horarioEntrenamiento = hora)))
+                        },
+                        label = "Franja Entrenamiento",
+                        modifier = Modifier.weight(1f)
+                    )
+                    IntField(
+                        value = h.tiempoDisponibleMinutos,
+                        onValueChange = { mins ->
+                            viewModel.onEvent(AddAtletaEvent.UpdateHabitos(h.copy(tiempoDisponibleMinutos = mins)))
+                        },
+                        label = "Tiempo/Sesión (min)",
+                        modifier = Modifier.weight(1f)
+                    )
+                }
             }
-
-            DecimalField(h.horasSueno, { viewModel.onEvent(AddAtletaEvent.UpdateHabitos(h.copy(horasSueno = it))) }, "Horas Promedio Sueño")
-            AtletaTextField(h.diasDisponibles, { viewModel.onEvent(AddAtletaEvent.UpdateHabitos(h.copy(diasDisponibles = it))) }, "Días Disponibles para Entrenar")
-            AtletaTextField(h.horarioEntrenamiento, { viewModel.onEvent(AddAtletaEvent.UpdateHabitos(h.copy(horarioEntrenamiento = it))) }, "Franja Horaria de Entrenamiento")
-            IntField(h.tiempoDisponibleMinutos, { viewModel.onEvent(AddAtletaEvent.UpdateHabitos(h.copy(tiempoDisponibleMinutos = it))) }, "Tiempo Disponible por Sesión (min)")
         }
+
+        // BLOQUE 2: HORARIOS Y SUEÑO AUTOCALCULADO
+        Card(
+            colors = CardDefaults.cardColors(containerColor = FondoTarjeta),
+            shape = RoundedCornerShape(16.dp)
+        ) {
+            Column(
+                modifier = Modifier.padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                Text(
+                    text = "Horarios y Descanso",
+                    style = MaterialTheme.typography.titleMedium,
+                    color = NaranjaAcento,
+                    fontWeight = FontWeight.Bold
+                )
+
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    AtletaTimePickerFieldKmp(
+                        value = h.horaDormir,
+                        onTimeSelected = { horaDormir ->
+                            val horasCalculadas = calcularHorasSuenoMatematico(horaDormir, h.horaDespertar)
+                            viewModel.onEvent(
+                                AddAtletaEvent.UpdateHabitos(
+                                    h.copy(
+                                        horaDormir = horaDormir,
+                                        horasSueno = horasCalculadas
+                                    )
+                                )
+                            )
+                        },
+                        label = "Hora Dormir",
+                        modifier = Modifier.weight(1f)
+                    )
+                    AtletaTimePickerFieldKmp(
+                        value = h.horaDespertar,
+                        onTimeSelected = { horaDespertar ->
+                            val horasCalculadas = calcularHorasSuenoMatematico(h.horaDormir, horaDespertar)
+                            viewModel.onEvent(
+                                AddAtletaEvent.UpdateHabitos(
+                                    h.copy(
+                                        horaDespertar = horaDespertar,
+                                        horasSueno = horasCalculadas
+                                    )
+                                )
+                            )
+                        },
+                        label = "Hora Despertar",
+                        modifier = Modifier.weight(1f)
+                    )
+                }
+
+                Surface(
+                    color = FondoOscuro,
+                    shape = RoundedCornerShape(8.dp),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Row(
+                        modifier = Modifier.padding(12.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = "Promedio de descanso estimado:",
+                            color = TextoSecundario,
+                            fontSize = 13.sp
+                        )
+                        Text(
+                            text = "${h.horasSueno} hrs",
+                            color = NaranjaAcento,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 15.sp
+                        )
+                    }
+                }
+            }
+        }
+
+        // BLOQUE 3: ESTILO DE VIDA
+        Card(
+            colors = CardDefaults.cardColors(containerColor = FondoTarjeta),
+            shape = RoundedCornerShape(16.dp)
+        ) {
+            Column(
+                modifier = Modifier.padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                Text(
+                    text = "Estilo de Vida",
+                    style = MaterialTheme.typography.titleMedium,
+                    color = NaranjaAcento,
+                    fontWeight = FontWeight.Bold
+                )
+
+                AtletaTextField(
+                    value = h.actividadesPrincipales,
+                    onValueChange = { actividades ->
+                        viewModel.onEvent(AddAtletaEvent.UpdateHabitos(h.copy(actividadesPrincipales = actividades)))
+                    },
+                    label = "Actividades Laborales / Diarias (ej. Trabajo oficina, estudiante)"
+                )
+            }
+        }
+    }
+}
+
+// 🟢 COMPOSABLE AUXILIAR: Chips de selección directa de días de la semana
+@Composable
+fun SelectorDiasSemanaEstricto(
+    diasSeleccionados: String,
+    onDiasCambiados: (String) -> Unit
+) {
+    val todosLosDias = listOf("Lun", "Mar", "Mié", "Jue", "Vie", "Sáb", "Dom")
+    val listaActual = remember(diasSeleccionados) {
+        if (diasSeleccionados.isBlank()) emptyList()
+        else diasSeleccionados.split(", ").map { it.trim() }
+    }
+
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(4.dp)
+    ) {
+        todosLosDias.forEach { dia ->
+            val estaSeleccionado = listaActual.contains(dia)
+            Box(
+                modifier = Modifier
+                    .weight(1f)
+                    .aspectRatio(1f)
+                    .background(
+                        color = if (estaSeleccionado) NaranjaAcento else FondoOscuro,
+                        shape = RoundedCornerShape(8.dp)
+                    )
+                    .clickable {
+                        val nuevaLista = if (estaSeleccionado) listaActual - dia else listaActual + dia
+                        val ordenados = todosLosDias.filter { nuevaLista.contains(it) }
+                        onDiasCambiados(ordenados.joinToString(", "))
+                    },
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = dia,
+                    color = if (estaSeleccionado) FondoOscuro else Color.White,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 12.sp
+                )
+            }
+        }
+    }
+}
+
+// 🟢 HELPER MATEMÁTICO: Recalcula horas de sueño al mover cualquier hora
+private fun calcularHorasSuenoMatematico(horaDormir: String, horaDespertar: String): Double {
+    return try {
+        val partesDormir = horaDormir.split(":")
+        val partesDespertar = horaDespertar.split(":")
+        if (partesDormir.size < 2 || partesDespertar.size < 2) return 0.0
+        val minDormir = partesDormir[0].toInt() * 60 + partesDormir[1].toInt()
+        var minDespertar = partesDespertar[0].toInt() * 60 + partesDespertar[1].toInt()
+        if (minDespertar <= minDormir) {
+            minDespertar += 24 * 60
+        }
+        val diff = minDespertar - minDormir
+        ((diff / 60.0) * 10).toInt() / 10.0
+    } catch (e: Exception) {
+        0.0
     }
 }
 
@@ -397,7 +596,6 @@ fun FormularioSuscripcion(state: AddAtletaState, viewModel: AddAtletaViewModel) 
         Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             Text("Asignación de Membresía Inicial", style = MaterialTheme.typography.titleMedium, color = NaranjaAcento, fontWeight = FontWeight.Bold)
 
-            // 🟢 CORREGIDO: Migrado de .values() a .entries para optimizar memoria KMP
             AtletaDropdown(
                 selectedOption = state.planSeleccionado.etiqueta,
                 onOptionSelected = { etiqueta ->
@@ -480,7 +678,6 @@ fun AtletaDropdown(
     label: String,
     modifier: Modifier = Modifier
 ) {
-    // 🟢 CORREGIDO: rememberSaveable para resguardar el menú desplegable abierto
     var expanded by rememberSaveable { mutableStateOf(false) }
 
     Box(modifier = modifier) {
@@ -531,7 +728,6 @@ fun SearchableNacionalidadDropdown(
     onNacionalidadSelected: (String) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    // 🟢 CORREGIDO: rememberSaveable blinda el estado del diálogo de nacionalidades
     var showDialog by rememberSaveable { mutableStateOf(false) }
 
     Box(modifier = modifier) {
@@ -644,7 +840,6 @@ fun AtletaDatePickerFieldKmp(
     label: String,
     modifier: Modifier = Modifier
 ) {
-    // 🟢 CORREGIDO: Estado persistente para el selector de calendario nativo
     var showDatePicker by rememberSaveable { mutableStateOf(false) }
 
     Box(modifier = modifier) {
@@ -693,7 +888,6 @@ fun AtletaTimePickerFieldKmp(
     label: String,
     modifier: Modifier = Modifier
 ) {
-    // 🟢 CORREGIDO: Estado persistente para el reloj analógico manual
     var showTimePicker by rememberSaveable { mutableStateOf(false) }
 
     Box(modifier = modifier) {
@@ -764,36 +958,66 @@ fun KmpDatePickerDialog(
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun KmpTimePickerDialog(
     onDismiss: () -> Unit,
     onTimeSelected: (String) -> Unit
 ) {
-    var hour by rememberSaveable { mutableStateOf(6) }
-    var minute by rememberSaveable { mutableStateOf(0) }
+    // Estado nativo de Material 3 para el reloj
+    val timePickerState = rememberTimePickerState(
+        initialHour = 6,
+        initialMinute = 0,
+        is24Hour = true
+    )
 
     AlertDialog(
         onDismissRequest = onDismiss,
         containerColor = FondoTarjeta,
-        title = { Text("Seleccionar Hora", color = TextoPrincipal, fontSize = 18.sp, fontWeight = FontWeight.Bold) },
+        title = {
+            Text(
+                text = "Seleccionar Hora",
+                color = TextoPrincipal,
+                fontSize = 18.sp,
+                fontWeight = FontWeight.Bold
+            )
+        },
         text = {
-            Row(
-                modifier = Modifier.fillMaxWidth().padding(vertical = 16.dp),
-                horizontalArrangement = Arrangement.Center,
-                verticalAlignment = Alignment.CenterVertically
+            Box(
+                modifier = Modifier.fillMaxWidth(),
+                contentAlignment = Alignment.Center
             ) {
-                NumberPickerSimple(value = hour, onValueChange = { hour = it }, range = 0..23, label = "Hora")
-                Text(" : ", color = TextoPrincipal, fontSize = 24.sp, modifier = Modifier.padding(horizontal = 16.dp))
-                NumberPickerSimple(value = minute, onValueChange = { minute = it }, range = 0..59, label = "Minuto")
+                // Componente nativo de reloj con dial táctil
+                TimePicker(
+                    state = timePickerState,
+                    colors = TimePickerDefaults.colors(
+                        clockDialColor = FondoOscuro,
+                        clockDialUnselectedContentColor = Color.White,
+                        clockDialSelectedContentColor = FondoOscuro,
+                        selectorColor = NaranjaAcento,
+                        containerColor = FondoTarjeta,
+                        periodSelectorBorderColor = NaranjaAcento,
+                        periodSelectorSelectedContainerColor = NaranjaAcento,
+                        periodSelectorUnselectedContainerColor = FondoOscuro,
+                        periodSelectorSelectedContentColor = FondoOscuro,
+                        periodSelectorUnselectedContentColor = TextoPrincipal,
+                        timeSelectorSelectedContainerColor = NaranjaAcento.copy(alpha = 0.25f),
+                        timeSelectorUnselectedContainerColor = FondoOscuro,
+                        timeSelectorSelectedContentColor = NaranjaAcento,
+                        timeSelectorUnselectedContentColor = TextoPrincipal
+                    )
+                )
             }
         },
         confirmButton = {
-            TextButton(onClick = {
-                val formattedTime = "${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}"
-                onTimeSelected(formattedTime)
-                onDismiss()
-            }) {
-                Text("Confirmar", color = NaranjaAcento)
+            TextButton(
+                onClick = {
+                    val formattedTime = "${timePickerState.hour.toString().padStart(2, '0')}:${timePickerState.minute.toString().padStart(2, '0')}"
+                    onTimeSelected(formattedTime)
+                    onDismiss()
+                }
+            ) {
+                Text("Confirmar", color = NaranjaAcento, fontWeight = FontWeight.Bold)
             }
         },
         dismissButton = {
@@ -846,8 +1070,8 @@ fun NumberPickerSimple(
 }
 
 private val listaCompletaNacionalidades = listOf(
-    "Alemana", "Argentina", "Australiana", "Belga", "Boliviana", "Brasileña", "Canadiense",
-    "Chilena", "China", "Colombiana", "Costarricense", "Cubana", "Ecuatoriana", "Salvadoreña",
+    "Colombiana", "Alemana", "Argentina", "Australiana", "Belga", "Boliviana", "Brasileña", "Canadiense",
+    "Chilena", "China", "Costarricense", "Cubana", "Ecuatoriana", "Salvadoreña",
     "Española", "Estadounidense", "Francesa", "Guatemalteca", "Hondureña", "Inglesa", "Italiana",
     "Mexicana", "Nicaragüense", "Panameña", "Paraguaya", "Peruana", "Portorriqueña", "Dominicana",
     "Uruguaya", "Venezolana", "Otra"

@@ -42,7 +42,7 @@ sealed interface AddAtletaEvent {
     data class UpdatePlan(val plan: TipoPlanSuscripcion) : AddAtletaEvent
     data class UpdateDiasPersonalizados(val dias: Int) : AddAtletaEvent
     data class UpdateIniciarPeriodo(val iniciar: Boolean) : AddAtletaEvent
-    data class UpdateFechaInicioPlan(val fecha: Long) : AddAtletaEvent // 🟢 Evento para actualizar fecha
+    data class UpdateFechaInicioPlan(val fecha: Long) : AddAtletaEvent
     object NextStep : AddAtletaEvent
     object PrevStep : AddAtletaEvent
     object SaveAtleta : AddAtletaEvent
@@ -136,7 +136,6 @@ class AddAtletaViewModel(
 
         viewModelScope.launch {
             try {
-                // 🟢 SE ELIMINÓ LA CONSULTA REPETIDA DE 'userRepository.existeCorreo'
                 val entrenadorId = atletaRepository.obtenerIdEntrenadorActual()
                     ?: throw Exception("No se pudo obtener el ID del entrenador actual.")
 
@@ -176,21 +175,30 @@ class AddAtletaViewModel(
                     fechaCreacion = ahoraMilis
                 )
 
-                val exito = atletaRepository.crearAtletaCompleto(
+                val documentoLimpio = usuarioModificado.numeroDocumento.trim()
+                val contrasenaTemporalSegura = if (documentoLimpio.length >= 6) {
+                    documentoLimpio
+                } else {
+                    documentoLimpio.padEnd(6, '0')
+                }
+
+                atletaRepository.crearAtletaCompleto(
                     usuario = usuarioModificado,
                     valoracion = currentState.valoracionFisica,
                     habitos = currentState.habitos,
-                    contrasenaTemporal = usuarioModificado.numeroDocumento.trim(),
+                    contrasenaTemporal = contrasenaTemporalSegura,
                     primerPeriodo = primerPeriodo
                 )
 
-                if (exito) {
-                    _state.update { it.copy(isSaving = false, isSuccess = true) }
-                } else {
-                    _state.update { it.copy(isSaving = false, error = "Fallo al guardar en el servidor.") }
-                }
+                _state.update { it.copy(isSaving = false, isSuccess = true) }
+
             } catch (e: Exception) {
-                _state.update { it.copy(isSaving = false, error = e.message ?: "Ocurrió un error inesperado") }
+                val mensajeLimpio = when {
+                    e.message?.contains("already in use", ignoreCase = true) == true ->
+                        "El correo electrónico ya existe en la autenticación del sistema."
+                    else -> e.message ?: "Ocurrió un error inesperado"
+                }
+                _state.update { it.copy(isSaving = false, error = mensajeLimpio) }
             }
         }
     }

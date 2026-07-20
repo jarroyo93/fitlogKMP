@@ -7,7 +7,7 @@ import dev.josearroyo.fitlog.calcularFechaFinSuscripcion
 import dev.josearroyo.fitlog.data.model.Usuario
 import dev.josearroyo.fitlog.data.model.EstadoSuscripcion
 import dev.josearroyo.fitlog.data.model.TipoPlanSuscripcion
-import dev.josearroyo.fitlog.data.model.EstadoPeriodo // 🚀 Importación obligatoria
+import dev.josearroyo.fitlog.data.model.EstadoPeriodo
 import dev.josearroyo.fitlog.repository.UserRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -152,16 +152,22 @@ class FacturacionViewModel : ViewModel() {
 
             val saldoMilis = if (vencimiento > ahora) vencimiento - ahora else 0L
 
-            _state.update { it.copy(isLoading = true) }
+            // 🛡️ Validación de saldo disponible antes de congelar
+            if (saldoMilis <= 0L) {
+                _state.update { it.copy(error = "No se puede pausar una suscripción vencida o sin tiempo restante.") }
+                return@launch
+            }
+
+            _state.update { it.copy(isLoading = true, error = null) }
             try {
                 val exito = userRepository.pausarAtleta(atletaId, motivo, saldoMilis)
                 if (exito) {
                     cargarAtletas(entrenadorId)
                 } else {
-                    _state.update { it.copy(isLoading = false) }
+                    _state.update { it.copy(isLoading = false, error = "No se pudo congelar la membresía.") }
                 }
             } catch (e: Exception) {
-                _state.update { it.copy(isLoading = false) }
+                _state.update { it.copy(isLoading = false, error = e.message ?: "Error al pausar la membresía") }
             }
         }
     }
@@ -172,18 +178,24 @@ class FacturacionViewModel : ViewModel() {
             val saldoMilis = atleta.saldoMilisegundosRestantes ?: 0L
             val ahora = getCurrentTimeMillis()
 
+            // 🛡️ Validación de saldo acumulado antes de recalcular fecha fin
+            if (saldoMilis <= 0L) {
+                _state.update { it.copy(error = "El atleta no tiene saldo acumulado para reactivar.") }
+                return@launch
+            }
+
             val nuevaFechaFin = ahora + saldoMilis
 
-            _state.update { it.copy(isLoading = true) }
+            _state.update { it.copy(isLoading = true, error = null) }
             try {
                 val exito = userRepository.reactivarAtleta(atletaId, nuevaFechaFin)
                 if (exito) {
                     cargarAtletas(entrenadorId)
                 } else {
-                    _state.update { it.copy(isLoading = false) }
+                    _state.update { it.copy(isLoading = false, error = "No se pudo reactivar la membresía.") }
                 }
             } catch (e: Exception) {
-                _state.update { it.copy(isLoading = false) }
+                _state.update { it.copy(isLoading = false, error = e.message ?: "Error al reactivar la membresía") }
             }
         }
     }

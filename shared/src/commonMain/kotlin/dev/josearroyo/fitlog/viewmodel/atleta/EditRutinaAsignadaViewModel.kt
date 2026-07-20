@@ -57,25 +57,29 @@ class EditRutinaAsignadaViewModel : ViewModel() {
         _state.update { state ->
             val actual = state.rutina ?: return@update state
             val dias = actual.diasEntrenamiento.sortedBy { it.ordenSecuencia }.toMutableList()
+            if (diaIndex !in dias.indices) return@update state
+
             dias.removeAt(diaIndex)
             val reorganizados = dias.mapIndexed { index, dia -> dia.copy(ordenSecuencia = index + 1) }
             state.copy(rutina = actual.copy(diasEntrenamiento = reorganizados))
         }
     }
 
-    // 🚀 INTEGRADO: Mover Día Arriba/Abajo nativo original
+
     fun moverDia(diaIndex: Int, direccion: Int) {
         _state.update { state ->
             val actual = state.rutina ?: return@update state
             val dias = actual.diasEntrenamiento.sortedBy { it.ordenSecuencia }.toMutableList()
             val nuevoIndex = diaIndex + direccion
-            if (nuevoIndex in dias.indices) {
+
+
+            if (diaIndex in dias.indices && nuevoIndex in dias.indices) {
                 val temp = dias[diaIndex]
                 dias[diaIndex] = dias[nuevoIndex]
                 dias[nuevoIndex] = temp
-            }
-            val reorganizados = dias.mapIndexed { index, dia -> dia.copy(ordenSecuencia = index + 1) }
-            state.copy(rutina = actual.copy(diasEntrenamiento = reorganizados))
+                val reorganizados = dias.mapIndexed { index, dia -> dia.copy(ordenSecuencia = index + 1) }
+                state.copy(rutina = actual.copy(diasEntrenamiento = reorganizados))
+            } else state
         }
     }
 
@@ -83,8 +87,12 @@ class EditRutinaAsignadaViewModel : ViewModel() {
         _state.update { state ->
             val actual = state.rutina ?: return@update state
             val dias = actual.diasEntrenamiento.sortedBy { it.ordenSecuencia }.toMutableList()
+            if (diaIndex !in dias.indices) return@update state
+
             val dia = dias[diaIndex]
             val ejercicios = dia.ejercicios.sortedBy { it.ordenSecuencia }.toMutableList()
+            if (ejercicioIndex !in ejercicios.indices) return@update state
+
             ejercicios.removeAt(ejercicioIndex)
             val ejReorganizados = ejercicios.mapIndexed { index, ej -> ej.copy(ordenSecuencia = index + 1) }
             dias[diaIndex] = dia.copy(ejercicios = ejReorganizados)
@@ -92,22 +100,25 @@ class EditRutinaAsignadaViewModel : ViewModel() {
         }
     }
 
-    // 🚀 INTEGRADO: Mover Ejercicio Arriba/Abajo nativo original
+
     fun moverEjercicio(diaIndex: Int, ejercicioIndex: Int, direccion: Int) {
         _state.update { state ->
             val actual = state.rutina ?: return@update state
             val dias = actual.diasEntrenamiento.sortedBy { it.ordenSecuencia }.toMutableList()
+            if (diaIndex !in dias.indices) return@update state
+
             val dia = dias[diaIndex]
             val ejercicios = dia.ejercicios.sortedBy { it.ordenSecuencia }.toMutableList()
             val nuevoIndex = ejercicioIndex + direccion
-            if (nuevoIndex in ejercicios.indices) {
+
+            if (ejercicioIndex in ejercicios.indices && nuevoIndex in ejercicios.indices) {
                 val temp = ejercicios[ejercicioIndex]
                 ejercicios[ejercicioIndex] = ejercicios[nuevoIndex]
                 ejercicios[nuevoIndex] = temp
-            }
-            val ejReorganizados = ejercicios.mapIndexed { index, ej -> ej.copy(ordenSecuencia = index + 1) }
-            dias[diaIndex] = dia.copy(ejercicios = ejReorganizados)
-            state.copy(rutina = actual.copy(diasEntrenamiento = dias))
+                val ejReorganizados = ejercicios.mapIndexed { index, ej -> ej.copy(ordenSecuencia = index + 1) }
+                dias[diaIndex] = dia.copy(ejercicios = ejReorganizados)
+                state.copy(rutina = actual.copy(diasEntrenamiento = dias))
+            } else state
         }
     }
 
