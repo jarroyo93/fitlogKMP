@@ -29,7 +29,8 @@ data class FacturacionState(
     val atletas: List<Usuario> = emptyList(),
     val atletasFiltrados: List<Usuario> = emptyList(),
     val searchQuery: String = "",
-    val filtroActual: FiltroFacturacion = FiltroFacturacion.TODOS
+    val filtroActual: FiltroFacturacion = FiltroFacturacion.TODOS,
+    val error: String? = null
 )
 
 class FacturacionViewModel : ViewModel() {
@@ -39,13 +40,14 @@ class FacturacionViewModel : ViewModel() {
 
     fun cargarAtletas(entrenadorId: String) {
         viewModelScope.launch {
-            _state.update { it.copy(isLoading = true) }
+            _state.update { it.copy(isLoading = true, error = null) }
             try {
                 val lista = userRepository.obtenerAtletasPorEntrenador(entrenadorId)
                 _state.update { it.copy(atletas = lista, isLoading = false) }
                 aplicarFiltros()
             } catch (e: Exception) {
-                _state.update { it.copy(isLoading = false) }
+                println("🔥 [FacturacionViewModel] Error al cargar atletas: ${e.message}")
+                _state.update { it.copy(isLoading = false, error = e.message ?: "Error de conexión al obtener la lista") }
             }
         }
     }
@@ -121,7 +123,7 @@ class FacturacionViewModel : ViewModel() {
             val estadoPeriodoCalculado = if (tienePlanActivoCorriendo) EstadoPeriodo.DIFERIDO else EstadoPeriodo.ACTIVO
 
             _state.update { it.copy(isLoading = true) }
-            try { // 🟢 Protegido contra caídas de red durante la transacción
+            try {
                 val exito = userRepository.renovarSuscripcion(
                     atletaId = atletaId,
                     entrenadorId = entrenadorId,
@@ -133,10 +135,11 @@ class FacturacionViewModel : ViewModel() {
                 if (exito) {
                     cargarAtletas(entrenadorId)
                 } else {
-                    _state.update { it.copy(isLoading = false) }
+                    _state.update { it.copy(isLoading = false, error = "No se pudo renovar la suscripción en el servidor.") }
                 }
             } catch (e: Exception) {
-                _state.update { it.copy(isLoading = false) }
+                println("🔥 [FacturacionViewModel] Error en renovación: ${e.message}")
+                _state.update { it.copy(isLoading = false, error = e.message ?: "Ocurrió un error inesperado al renovar") }
             }
         }
     }

@@ -42,7 +42,7 @@ class EntrenarViewModel : ViewModel() {
                     return@launch
                 }
 
-                // 🟢 Borrador local consultado sin pasar Context de Android
+
                 val borradorLocal = BorradorLocalManager.obtenerBorradorLocal()
                 val rutina = atletaRepository.obtenerRutinaAsignada(usuario.id, rutinaId)
 

@@ -11,7 +11,8 @@ import kotlinx.coroutines.launch
 
 data class HistorialState(
     val lista: List<ValoracionFisica> = emptyList(),
-    val isLoading: Boolean = false
+    val isLoading: Boolean = false,
+    val error: String? = null
 )
 
 class HistorialValoracionViewModel : ViewModel() {
@@ -21,12 +22,13 @@ class HistorialValoracionViewModel : ViewModel() {
 
     fun cargarHistorial(atletaId: String) {
         viewModelScope.launch {
-            _state.update { it.copy(isLoading = true) }
+            _state.update { it.copy(isLoading = true, error = null) }
             try {
                 val lista = repository.obtenerHistorialValoraciones(atletaId)
                 _state.update { it.copy(lista = lista, isLoading = false) }
             } catch (e: Exception) {
-                _state.update { it.copy(isLoading = false) }
+                println("🔥 [HistorialValoracionViewModel] Error al cargar historial: ${e.message}")
+                _state.update { it.copy(isLoading = false, error = e.message ?: "No se pudo cargar el historial") }
             }
         }
     }

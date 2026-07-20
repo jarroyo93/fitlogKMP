@@ -1,5 +1,6 @@
 package dev.josearroyo.fitlog.ui.entrenador
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -40,10 +41,7 @@ fun EntrenadorDashboardScreen(
     onAddAtletaClick: () -> Unit
 ) {
     val dashboardViewModel: EntrenadorViewModel = viewModel { EntrenadorViewModel() }
-
-    // 🟢 AQUÍ ESTÁ EL CAMBIO CLAVE: Recolectamos el estado completo unificado
     val state by dashboardViewModel.uiState.collectAsState()
-
     val clipboardManager = LocalClipboardManager.current
     var mostrarDialogOpciones by rememberSaveable { mutableStateOf(false) }
 
@@ -53,7 +51,6 @@ fun EntrenadorDashboardScreen(
 
     Box(modifier = Modifier.fillMaxSize().background(FondoOscuro)) {
         Column(modifier = Modifier.fillMaxSize()) {
-
             TabRow(
                 selectedTabIndex = state.tabSeleccionado,
                 containerColor = FondoOscuro,
@@ -128,33 +125,21 @@ fun EntrenadorDashboardScreen(
             }
         }
 
+        // Botón flotante limpio
         FloatingActionButton(
-            onClick = {
-                if (state.codigoGenerado != null) {
-                    clipboardManager.setText(AnnotatedString(state.codigoGenerado!!))
-                    dashboardViewModel.limpiarCodigo()
-                } else {
-                    mostrarDialogOpciones = true
-                }
-            },
+            onClick = { mostrarDialogOpciones = true },
             containerColor = NaranjaAcento,
             contentColor = FondoOscuro,
             modifier = Modifier.align(Alignment.BottomEnd).padding(16.dp)
         ) {
             if (state.isGeneratingCode) {
                 CircularProgressIndicator(modifier = Modifier.size(24.dp), color = FondoOscuro)
-            } else if (state.codigoGenerado != null) {
-                Row(modifier = Modifier.padding(horizontal = 12.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.Default.CheckCircle, contentDescription = null)
-                    Spacer(modifier = Modifier.width(6.dp))
-                    Text("Copiar: ${state.codigoGenerado}", fontWeight = FontWeight.Bold, fontSize = 14.sp)
-                }
             } else {
                 Icon(Icons.Default.Add, contentDescription = "Agregar Atleta")
             }
         }
 
-        // ... (El resto del código del diálogo sigue igual)
+        // Modal 1: Opciones de Registro
         if (mostrarDialogOpciones) {
             AlertDialog(
                 onDismissRequest = { mostrarDialogOpciones = false },
@@ -168,20 +153,88 @@ fun EntrenadorDashboardScreen(
                             modifier = Modifier.fillMaxWidth(),
                             colors = ButtonDefaults.buttonColors(containerColor = NaranjaAcento)
                         ) { Text("Crear Manualmente", color = Color.White, fontWeight = FontWeight.Bold) }
-
                         OutlinedButton(
-                            onClick = { mostrarDialogOpciones = false; dashboardViewModel.generarCodigoVinculacion(entrenadorId) },
+                            onClick = {
+                                mostrarDialogOpciones = false
+                                dashboardViewModel.generarCodigoVinculacion(entrenadorId)
+                            },
                             modifier = Modifier.fillMaxWidth(),
                             colors = ButtonDefaults.outlinedButtonColors(contentColor = NaranjaAcento),
-                            border = androidx.compose.foundation.BorderStroke(1.dp, NaranjaAcento)
+                            border = BorderStroke(1.dp, NaranjaAcento)
                         ) { Text("Generar Código", fontWeight = FontWeight.Bold) }
+                    }
+                }
+            )
+        }
+
+        // Modal 2: Diálogo Dedicado controlado por la bandera de visibilidad 🟢
+        if (state.mostrarModalCodigo && state.codigoGenerado != null) {
+            AlertDialog(
+                onDismissRequest = { dashboardViewModel.ocultarModalCodigo() },
+                containerColor = FondoTarjeta,
+                title = { Text("Código de Vinculación", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 18.sp) },
+                text = {
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(12.dp),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text(
+                            text = "Proporciona este código a tu atleta para que se vincule desde su aplicación:",
+                            color = TextoSecundario,
+                            fontSize = 13.sp,
+                            textAlign = TextAlign.Center
+                        )
+                        Surface(
+                            color = FondoOscuro,
+                            shape = RoundedCornerShape(8.dp),
+                            border = BorderStroke(1.dp, NaranjaAcento),
+                            modifier = Modifier.padding(vertical = 8.dp)
+                        ) {
+                            Text(
+                                text = state.codigoGenerado!!,
+                                color = NaranjaAcento,
+                                fontSize = 28.sp,
+                                fontWeight = FontWeight.Black,
+                                modifier = Modifier.padding(horizontal = 24.dp, vertical = 12.dp),
+                                letterSpacing = 2.sp
+                            )
+                        }
+                        state.expiracionCodigoTexto?.let { exp ->
+                            Text(
+                                text = "Válido hasta: $exp",
+                                color = TextoSecundario,
+                                fontSize = 12.sp
+                            )
+                        }
+                    }
+                },
+                confirmButton = {
+                    Button(
+                        onClick = {
+                            clipboardManager.setText(AnnotatedString(state.codigoGenerado!!))
+                            dashboardViewModel.ocultarModalCodigo() // 🟢 Cerramos la vista modal
+                        },
+                        colors = ButtonDefaults.buttonColors(containerColor = NaranjaAcento, contentColor = FondoOscuro),
+                        shape = RoundedCornerShape(8.dp)
+                    ) {
+                        Icon(Icons.Default.ContentCopy, contentDescription = null, modifier = Modifier.size(16.dp))
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text("Copiar Código", fontWeight = FontWeight.Bold)
+                    }
+                },
+                dismissButton = {
+                    TextButton(
+                        onClick = { dashboardViewModel.ocultarModalCodigo() },
+                        colors = ButtonDefaults.textButtonColors(contentColor = TextoSecundario)
+                    ) {
+                        Text("Cerrar")
                     }
                 }
             )
         }
     }
 }
-
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable

@@ -90,7 +90,6 @@ class AddEjercicioViewModel(
                 }
                 _state.update { it.copy(isLoading = false, isSaved = true) }
             } catch (e: Exception) {
-                // En vez de printStackTrace(), exponemos el error de forma segura a la UI de KMP 🟢
                 _state.update { it.copy(isLoading = false, error = e.message ?: "Error al guardar el ejercicio") }
             }
         }

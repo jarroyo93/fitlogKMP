@@ -36,7 +36,7 @@ val NaranjaAcento = Color(0xFFFF9F6D)
 @Composable
 fun LoginScreen(
     authViewModel: AuthViewModel = viewModel { AuthViewModel() },
-    onLoginSuccess: (String, RolUsuario) -> Unit
+    onLoginSuccess: (uid: String, rol: RolUsuario, requiereCambioContrasena: Boolean) -> Unit
 ) {
     val authState by authViewModel.authState.collectAsState()
 
@@ -47,9 +47,8 @@ fun LoginScreen(
 
     LaunchedEffect(authState) {
         if (authState is AuthState.Success) {
-            val uid = (authState as AuthState.Success).uid
-            val rol = (authState as AuthState.Success).rol
-            onLoginSuccess(uid, rol)
+            val success = authState as AuthState.Success
+            onLoginSuccess(success.uid, success.rol, success.requiereCambioContrasena)
             authViewModel.resetState()
         }
     }
@@ -196,7 +195,7 @@ fun Password(password: String, onTextChange: (String) -> Unit) {
 @Composable
 fun ImagenLogo() {
     Image(
-        painter = painterResource(Res.drawable.logo), // 🔥 Cambiado a Recursos Multiplataforma
+        painter = painterResource(Res.drawable.logo),
         contentDescription = "Logo principal",
         modifier = Modifier
             .width(280.dp)

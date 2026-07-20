@@ -50,7 +50,7 @@ class HistorialFacturacionViewModel : ViewModel() {
         plan: TipoPlanSuscripcion,
         diasPersonalizados: Int,
         iniciarEnseguida: Boolean,
-        fechaInicioSeleccionadaMilis: Long // 🟢 KMP: timestamp puro de plataforma
+        fechaInicioSeleccionadaMilis: Long
     ) {
         viewModelScope.launch {
             _state.update { it.copy(isLoading = true) }
@@ -58,21 +58,21 @@ class HistorialFacturacionViewModel : ViewModel() {
             val ahora = getCurrentTimeMillis()
             val diasDelPlan = if (plan == TipoPlanSuscripcion.PERSONALIZADO) diasPersonalizados else plan.dias
 
-            // Buscamos el vencimiento más lejano de todos los planes vigentes o diferidos
+
             val vencimientoMasLejanoEnLista = _state.value.periodos
                 .filter { it.estado == EstadoPeriodo.ACTIVO || it.estado == EstadoPeriodo.DIFERIDO }
                 .maxOfOrNull { it.fechaFin ?: 0L }
 
             val vencimientoBase = vencimientoMasLejanoEnLista ?: _state.value.atleta?.vencimientoSuscripcion ?: 0L
 
-            // 🟢 OPTIMIZACIÓN KMP: Determinamos la fecha de inicio de forma limpia
+
             val fechaInicioLong = if (iniciarEnseguida) {
                 if (vencimientoBase > ahora) vencimientoBase + 1000L else ahora
             } else {
                 fechaInicioSeleccionadaMilis
             }
 
-            // 🟢 SOLUCIÓN ATÓMICA: Tu función multiplataforma calcula el cierre perfecto en Android/iOS
+
             val fechaFinLong = calcularFechaFinSuscripcion(fechaInicioLong, diasDelPlan)
 
             val estadoPeriodoCalculado = if (fechaInicioLong > ahora) {

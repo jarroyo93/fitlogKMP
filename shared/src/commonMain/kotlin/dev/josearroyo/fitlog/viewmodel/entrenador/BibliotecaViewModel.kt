@@ -65,7 +65,7 @@ class BibliotecaViewModel : ViewModel() {
                 val plantillas = repository.obtenerPlantillasDelEntrenador(entrenadorId)
                 _state.update { it.copy(listaPlantillas = plantillas, isLoadingPlantillas = false) }
             } catch (e: Exception) {
-                _state.update { it.copy(isLoadingPlantillas = false, error = e.message ?: "Error al cargar plantillas") }
+                _state.update { it.copy(isLoadingPlantillas = false, error = e.message ?: "Error al cargar las plantillas") }
             }
         }
     }

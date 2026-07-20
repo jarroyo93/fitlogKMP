@@ -10,6 +10,7 @@ plugins {
 
 kotlin {
     listOf(
+        iosX64(),
         iosArm64(),
         iosSimulatorArm64()
     ).forEach { iosTarget ->
@@ -25,7 +26,6 @@ kotlin {
         minSdk = libs.versions.android.minSdk.get().toInt()
 
         compilerOptions {
-            // 🚀 ACTUALIZADO A JVM 17 PARA RESTRICCIONES DE INLINE BYTECODE
             jvmTarget = JvmTarget.JVM_17
         }
         androidResources {
@@ -41,26 +41,31 @@ kotlin {
             implementation(libs.compose.uiToolingPreview)
             implementation(project.dependencies.platform("com.google.firebase:firebase-bom:33.1.2"))
         }
+
         commonMain.dependencies {
-            implementation(libs.compose.runtime)
-            implementation(libs.compose.foundation)
-            implementation(libs.compose.material3)
-            implementation(libs.compose.ui)
-            implementation(libs.compose.components.resources)
-            implementation(libs.compose.uiToolingPreview)
+            // 🟢 Inyección vía DSL del Compose Multiplatform Plugin
+            implementation(compose.runtime)
+            implementation(compose.foundation)
+            implementation(compose.material3)
+            implementation(compose.ui)
+            implementation(compose.components.resources)
+            implementation(compose.materialIconsExtended)
+
+            // Librerías de catálogo
             implementation(libs.androidx.lifecycle.viewmodelCompose)
             implementation(libs.androidx.lifecycle.runtimeCompose)
             implementation(libs.firebase.auth)
             implementation(libs.firebase.firestore)
-            implementation(compose.materialIconsExtended)
             implementation(libs.androidx.navigation.compose)
             implementation(libs.kotlinx.serialization.json)
         }
+
         commonTest.dependencies {
             implementation(libs.kotlin.test)
         }
     }
 }
+
 dependencies {
     androidRuntimeClasspath(libs.compose.uiTooling)
 }

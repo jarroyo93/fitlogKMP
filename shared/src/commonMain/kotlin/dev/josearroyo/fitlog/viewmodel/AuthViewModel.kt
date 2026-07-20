@@ -11,11 +11,15 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
-// Estado de Login actualizado al estándar moderno de Kotlin 🟢
+// Estado de Login actualizado con la bandera de primer ingreso 🟢
 sealed class AuthState {
     data object Idle : AuthState()
     data object Loading : AuthState()
-    data class Success(val uid: String, val rol: RolUsuario) : AuthState()
+    data class Success(
+        val uid: String,
+        val rol: RolUsuario,
+        val requiereCambioContrasena: Boolean
+    ) : AuthState()
     data class Error(val message: String) : AuthState()
 }
 
@@ -27,7 +31,7 @@ data class ActivationState(
 )
 
 class AuthViewModel(
-    private val authRepository: AuthRepository = AuthRepository(), // Inyección por constructor 🛠️
+    private val authRepository: AuthRepository = AuthRepository(),
     private val userRepository: UserRepository = UserRepository()
 ) : ViewModel() {
 
@@ -47,7 +51,7 @@ class AuthViewModel(
             _authState.update { AuthState.Error("El correo y la contraseña son obligatorios") }
             return
         }
-        _authState.update { AuthState.Loading } // Actualización atómica de estado 🟢
+        _authState.update { AuthState.Loading }
 
         viewModelScope.launch {
             try {
@@ -55,7 +59,13 @@ class AuthViewModel(
                 val usuario = userRepository.obtenerUsuario(uid)
 
                 if (usuario != null) {
-                    _authState.update { AuthState.Success(uid, usuario.rol) }
+                    _authState.update {
+                        AuthState.Success(
+                            uid = uid,
+                            rol = usuario.rol,
+                            requiereCambioContrasena = usuario.requiereCambioContrasena
+                        )
+                    }
                 } else {
                     _authState.update { AuthState.Error("Usuario autenticado, pero sin perfil en la base de datos") }
                 }
@@ -78,6 +88,8 @@ class AuthViewModel(
 
             authRepository.cambiarContrasenaPrimeraVez(uid, contrasena)
                 .onSuccess {
+                    // Actualizamos en Firestore para que no vuelva a pedir el cambio en futuros logins 🟢
+                    userRepository.actualizarPerfilUsuario(uid, mapOf("requiereCambioContrasena" to false))
                     _activationState.update { it.copy(isLoading = false, isSuccess = true) }
                 }
                 .onFailure { exception ->

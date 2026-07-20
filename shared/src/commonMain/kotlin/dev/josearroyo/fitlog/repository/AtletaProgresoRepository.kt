@@ -12,20 +12,19 @@ import dev.josearroyo.fitlog.data.model.SesionEntrenamiento
 import dev.josearroyo.fitlog.data.model.TipoSerie
 import dev.josearroyo.fitlog.getCurrentTimeMillis
 import dev.josearroyo.fitlog.calcularFechaCierreCiclo
+import kotlin.uuid.ExperimentalUuidApi
+import kotlin.uuid.Uuid
 
+@OptIn(ExperimentalUuidApi::class)
 class AtletaProgresoRepository {
     private val db = Firebase.firestore
-
-    private fun generarDocumentId(): String {
-        return (1..20).map { "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789".random() }.joinToString("")
-    }
 
     // ============================================================
     // PESAJE Y MÉTRICAS
     // ============================================================
     suspend fun registrarPesaje(atletaId: String, pesaje: Pesaje): Boolean {
         return try {
-            val idUnico = generarDocumentId()
+            val idUnico = Uuid.random().toString()
             val ref = db.collection("users").document(atletaId).collection("pesajes").document(idUnico)
             ref.set(pesaje.copy(id = idUnico))
             true
@@ -44,7 +43,6 @@ class AtletaProgresoRepository {
 
             snapshot.documents.map { doc -> doc.data<Pesaje>().copy(id = doc.id) }
         } catch (e: Exception) {
-            // 🚀 Rompemos el silencio para ver el reporte real en Logcat
             println("🔥 ERROR EN REPOSITORIO AL TRAER PESAJES: ${e.message}")
             e.printStackTrace()
             emptyList()
@@ -63,7 +61,6 @@ class AtletaProgresoRepository {
 
             snapshot.documents.map { doc -> doc.data<SesionEntrenamiento>().copy(id = doc.id) }
         } catch (e: Exception) {
-            // 🚀 Agregamos la traza para depurar cualquier discrepancia remanente en el parseo
             e.printStackTrace()
             emptyList()
         }
@@ -78,20 +75,16 @@ class AtletaProgresoRepository {
     ): Boolean = try {
         val ahoraMilis = getCurrentTimeMillis()
 
-        // 🟢 DEFENSA CRÍTICA: Si el ID de la rutina viene vacío por un mapa incorrecto, lo detectamos
         val rutinaIdReal = rutinaActual.id.ifBlank {
             println("⚠️ ALERTA DE CONFIGURACIÓN: 'rutinaActual.id' vino VACÍO. Revisa cómo mapeas las rutinas en AtletaRepository.")
-            // Usamos un fallback temporal para que Firebase no lance una excepción de ruta inválida
             "ID_RUTINA_DESCONOCIDO"
         }
 
-        val nuevaSesionId = generarDocumentId()
+        val nuevaSesionId = Uuid.random().toString()
         val nuevaSesionRef = db.collection("users").document(atletaId).collection("historial_entrenamientos").document(nuevaSesionId)
         val sesionFinal = sesionProcesada.copy(id = nuevaSesionId)
 
         val ciclosRef = db.collection("users").document(atletaId).collection("ciclos_entrenamiento")
-
-        // 🚀 Usamos el ID validado para evitar colapsar la ruta de Firestore
         val rutinaRef = db.collection("users").document(atletaId).collection("rutinas_asignadas").document(rutinaIdReal)
 
         val activeCyclesSnapshot = ciclosRef.where("estaActivo", equalTo = true).get()
@@ -104,12 +97,11 @@ class AtletaProgresoRepository {
             cicloActivo = null
         }
 
-        // Orquestación del bloque transaccional atómico de GitLive Firestore
         db.runTransaction {
             set(nuevaSesionRef, sesionFinal)
 
             val cicloActualizado: CicloEntrenamiento
-            val cicloIdToUse = cicloActivo?.id ?: generarDocumentId()
+            val cicloIdToUse = cicloActivo?.id ?: Uuid.random().toString()
             val cicloRefToUse = ciclosRef.document(cicloIdToUse)
 
             if (cicloActivo == null) {
@@ -185,7 +177,6 @@ class AtletaProgresoRepository {
         }
         true
     } catch (e: Exception) {
-        // 🚀 SE ACABÓ EL SILENCIO: Esto imprimirá el error exacto en tu Logcat
         println("🔥 [AtletaProgresoRepository] ERROR CRÍTICO AL GUARDAR ENTRENAMIENTO: ${e.message}")
         e.printStackTrace()
         false
@@ -209,6 +200,8 @@ class AtletaProgresoRepository {
                 ciclo
             }
         } catch (e: Exception) {
+            println("🔥 [AtletaProgresoRepository] Error al obtener ciclo activo: ${e.message}")
+            e.printStackTrace()
             null
         }
     }
@@ -238,7 +231,8 @@ class AtletaProgresoRepository {
                 )
             }
         } catch (e: Exception) {
-            // Failsafe silencioso multiplataforma
+            println("🔥 [AtletaProgresoRepository] Error al actualizar meta del ciclo activo: ${e.message}")
+            e.printStackTrace()
         }
     }
 
@@ -252,7 +246,8 @@ class AtletaProgresoRepository {
                 ciclosRef.document(cicloActivo).update("estaActivo" to false)
             }
         } catch (e: Exception) {
-            // Failsafe
+            println("🔥 [AtletaProgresoRepository] Error al forzar cierre del ciclo activo: ${e.message}")
+            e.printStackTrace()
         }
     }
 }

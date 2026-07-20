@@ -25,7 +25,7 @@ data class AsistenciaAtletaUI(
     val horaEntrenamiento: String? = null
 )
 
-// 🟢 Estado unificado para consistencia arquitectónica y protección de memoria en iOS
+// 🟢 Estado unificado con bandera explícita para la visibilidad del modal
 data class EntrenadorUiState(
     val atletas: List<Usuario> = emptyList(),
     val asistenciaDia: List<AsistenciaAtletaUI> = emptyList(),
@@ -34,6 +34,7 @@ data class EntrenadorUiState(
     val isGeneratingCode: Boolean = false,
     val codigoGenerado: String? = null,
     val expiracionCodigoTexto: String? = null,
+    val mostrarModalCodigo: Boolean = false, // 🟢 Controla si el modal se muestra o no
     val textoBusqueda: String = "",
     val tabSeleccionado: Int = 0,
     val error: String? = null
@@ -67,6 +68,7 @@ class EntrenadorViewModel : ViewModel() {
                     state.copy(
                         codigoGenerado = codigo,
                         expiracionCodigoTexto = expiracionTexto
+                        // 🟢 NOTA: No activamos 'mostrarModalCodigo' aquí para evitar pop-ups al cargar/refrescar
                     )
                 }
 
@@ -87,7 +89,6 @@ class EntrenadorViewModel : ViewModel() {
             try {
                 val hoy = getCurrentTimeMillis()
 
-
                 supervisorScope {
                     listaAsistenciaCompleta = listaAtletasCompleta.map { atleta ->
                         async {
@@ -100,7 +101,7 @@ class EntrenadorViewModel : ViewModel() {
                                 horaEntrenamiento = sesionDeHoy?.let { formatearHora(it.fechaEjecucion) }
                             )
                         }
-                    }.awaitAll() // Esperamos a que todas las peticiones terminen juntas
+                    }.awaitAll()
                 }
 
                 aplicarBusqueda(_uiState.value.textoBusqueda)
@@ -141,7 +142,8 @@ class EntrenadorViewModel : ViewModel() {
 
                 _uiState.update { it.copy(
                     codigoGenerado = codigo,
-                    expiracionCodigoTexto = formatearFechaHora(tiempoExpiracion)
+                    expiracionCodigoTexto = formatearFechaHora(tiempoExpiracion),
+                    mostrarModalCodigo = true // 🟢 Activamos la visibilidad solo al generar deliberadamente
                 ) }
             } catch (e: Exception) {
                 _uiState.update { it.copy(error = "No se pudo generar el código.") }
@@ -151,7 +153,11 @@ class EntrenadorViewModel : ViewModel() {
         }
     }
 
+    fun ocultarModalCodigo() {
+        _uiState.update { it.copy(mostrarModalCodigo = false) }
+    }
+
     fun limpiarCodigo() {
-        _uiState.update { it.copy(codigoGenerado = null, expiracionCodigoTexto = null) }
+        _uiState.update { it.copy(codigoGenerado = null, expiracionCodigoTexto = null, mostrarModalCodigo = false) }
     }
 }

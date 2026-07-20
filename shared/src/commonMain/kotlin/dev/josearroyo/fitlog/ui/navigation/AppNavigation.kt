@@ -40,11 +40,8 @@ import dev.josearroyo.fitlog.ui.dashboard.entrenador.BibliotecaScreen
 import dev.josearroyo.fitlog.ui.profile.EditarDatosPersonalesScreen
 import dev.josearroyo.fitlog.ui.dashboard.entrenador.AddAtletaScreen
 import dev.josearroyo.fitlog.ui.dashboard.entrenador.HistorialFacturacionScreen
-import dev.josearroyo.fitlog.viewmodel.entrenador.AddAtletaViewModel
-
-// 🟢 NUEVAS IMPORTACIONES MULTIPLATAFORMA DE FACTURACIÓN
-
 import dev.josearroyo.fitlog.ui.dashboard.entrenador.InformeFacturacionGlobalScreen
+import dev.josearroyo.fitlog.viewmodel.entrenador.AddAtletaViewModel
 
 @Composable
 fun AppNavigation() {
@@ -70,13 +67,19 @@ fun AppNavigation() {
 
         composable("login") {
             LoginScreen(
-                onLoginSuccess = { uid, rol ->
-                    val destination = when (rol) {
-                        RolUsuario.ENTRENADOR -> "dashboard_entrenador/$uid"
-                        else -> "dashboard_atleta/$uid"
-                    }
-                    navController.navigate(destination) {
-                        popUpTo("login") { inclusive = true }
+                onLoginSuccess = { uid, rol, requiereCambioContrasena ->
+                    if (requiereCambioContrasena) {
+                        navController.navigate("cambiar_password/$uid") {
+                            popUpTo("login") { inclusive = true }
+                        }
+                    } else {
+                        val destination = when (rol) {
+                            RolUsuario.ENTRENADOR -> "dashboard_entrenador/$uid"
+                            else -> "dashboard_atleta/$uid"
+                        }
+                        navController.navigate(destination) {
+                            popUpTo("login") { inclusive = true }
+                        }
                     }
                 }
             )
@@ -91,7 +94,7 @@ fun AppNavigation() {
                 uid = uid,
                 onPasswordChangedSuccess = {
                     navController.navigate("dashboard_atleta/$uid") {
-                        popUpTo("login") { inclusive = true }
+                        popUpTo("cambiar_password/$uid") { inclusive = true }
                     }
                 }
             )
@@ -128,11 +131,9 @@ fun AppNavigation() {
                 onNavigateToEditarDatosPersonales = { entrenadorId ->
                     navController.navigate("editar_datos_personales/$entrenadorId")
                 },
-                // 🟢 CORRECCIÓN: Activamos la navegación real hacia el historial del atleta
                 onNavigateToHistorialFacturacion = { atletaId, entrenadorId ->
                     navController.navigate("historial_facturacion/$atletaId/$entrenadorId")
                 },
-                // 🟢 CORRECCIÓN: Activamos la navegación real hacia el informe contable general
                 onNavigateToInformeGlobalFacturacion = { entrenadorId ->
                     navController.navigate("informe_global_facturacion/$entrenadorId")
                 },
@@ -175,7 +176,7 @@ fun AppNavigation() {
         }
 
         // ============================================================
-        // ➕ NUEVA RUTA: AGREGAR ATLETA (PÁGINA COMPLETA DE CREACIÓN MANUAL)
+        // ➕ PÁGINA COMPLETA DE CREACIÓN MANUAL DE ATLETA
         // ============================================================
         composable(route = "agregar_atleta") {
             val addAtletaVM: AddAtletaViewModel = viewModel {
@@ -340,7 +341,7 @@ fun AppNavigation() {
         }
 
         // ============================================================
-        // 👥 RUTA COMPARTIDA / CAMALEÓNICA DE DATOS PERSONALES
+        // 👥 RUTA COMPARTIDA DE DATOS PERSONALES
         // ============================================================
         composable(
             route = "editar_datos_personales/{uid}",
@@ -415,7 +416,7 @@ fun AppNavigation() {
         }
 
         // ============================================================
-        // 🏋️ PANEL INTERNO DEL ATLETA (INTEGRADO Y OPERATIVO)
+        // 🏋️ PANEL INTERNO DEL ATLETA
         // ============================================================
         composable(
             route = "dashboard_atleta/{uid}",

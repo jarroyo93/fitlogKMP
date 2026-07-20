@@ -49,8 +49,11 @@ class PerfilEntrenadorViewModel : ViewModel() {
         viewModelScope.launch {
             try {
                 val entrenador = userRepository.obtenerUsuario(entrenadorId)
-                _uiState.update { it.copy(entrenadorAsignado = entrenador) } // 🟢 Cambiado a .update
-            } catch (e: Exception) { /* Silencioso o loguear */ }
+                _uiState.update { it.copy(entrenadorAsignado = entrenador) }
+            } catch (e: Exception) {
+                println("🔥 [PerfilEntrenadorViewModel] Error al cargar entrenador asignado: ${e.message}")
+                _uiState.update { it.copy(error = e.message ?: "Error al cargar la información del entrenador") }
+            }
         }
     }
 

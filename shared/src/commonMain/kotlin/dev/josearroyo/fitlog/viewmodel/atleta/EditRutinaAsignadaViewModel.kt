@@ -52,7 +52,6 @@ class EditRutinaAsignadaViewModel : ViewModel() {
         }
     }
 
-    // --- GESTIÓN DE DÍAS Y EJERCICIOS ---
 
     fun eliminarDia(diaIndex: Int) {
         _state.update { state ->
