@@ -27,6 +27,7 @@ import dev.josearroyo.fitlog.data.model.NivelExperiencia
 import dev.josearroyo.fitlog.data.model.TipoPlanSuscripcion
 import dev.josearroyo.fitlog.data.model.ValoracionFisica
 import dev.josearroyo.fitlog.data.model.Habitos
+import dev.josearroyo.fitlog.data.model.Sexo
 import dev.josearroyo.fitlog.data.model.Usuario
 import dev.josearroyo.fitlog.viewmodel.entrenador.AddAtletaViewModel
 import dev.josearroyo.fitlog.viewmodel.entrenador.AddAtletaEvent
@@ -202,7 +203,18 @@ fun FormularioDatosPersonales(u: Usuario, confirmarCorreo: String, viewModel: Ad
                 label = "Fecha de Nacimiento"
             )
 
+            // 🟢 FILA 1: SEXO Y TIPO DE SANGRE
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                AtletaDropdown(
+                    selectedOption = u.sexo.etiqueta,
+                    onOptionSelected = { etiqueta ->
+                        val sexoSeleccionado = Sexo.entries.find { it.etiqueta == etiqueta } ?: Sexo.MASCULINO
+                        viewModel.onEvent(AddAtletaEvent.UpdateUsuario(u.copy(sexo = sexoSeleccionado)))
+                    },
+                    options = Sexo.entries.map { it.etiqueta },
+                    label = "Sexo *",
+                    modifier = Modifier.weight(1f)
+                )
                 AtletaDropdown(
                     selectedOption = u.tipoSangre,
                     onOptionSelected = { viewModel.onEvent(AddAtletaEvent.UpdateUsuario(u.copy(tipoSangre = it))) },
@@ -210,12 +222,14 @@ fun FormularioDatosPersonales(u: Usuario, confirmarCorreo: String, viewModel: Ad
                     label = "T. Sangre",
                     modifier = Modifier.weight(1f)
                 )
-                SearchableNacionalidadDropdown(
-                    selectedNacionalidad = u.nacionalidad,
-                    onNacionalidadSelected = { viewModel.onEvent(AddAtletaEvent.UpdateUsuario(u.copy(nacionalidad = it))) },
-                    modifier = Modifier.weight(1.5f)
-                )
             }
+
+            // 🟢 FILA 2: NACIONALIDAD (Ocupa todo el ancho)
+            SearchableNacionalidadDropdown(
+                selectedNacionalidad = u.nacionalidad,
+                onNacionalidadSelected = { viewModel.onEvent(AddAtletaEvent.UpdateUsuario(u.copy(nacionalidad = it))) },
+                modifier = Modifier.fillMaxWidth()
+            )
 
             AtletaTextField(u.telefono, { viewModel.onEvent(AddAtletaEvent.UpdateUsuario(u.copy(telefono = it))) }, "Teléfono Celular", keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone))
             AtletaTextField(u.correo, { viewModel.onEvent(AddAtletaEvent.UpdateUsuario(u.copy(correo = it))) }, "Correo Electrónico *", keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email))
@@ -369,11 +383,9 @@ fun SubFormularioBioimpedanciaAtleta(v: ValoracionFisica, viewModel: AddAtletaVi
     }
 }
 
-// 🟢 REFACTORIZADO: Paso #3 simplificado y visualmente estructurado
 @Composable
 fun FormularioHabitos(h: Habitos, viewModel: AddAtletaViewModel) {
     Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
-        // BLOQUE 1: PLANIFICACIÓN DE ENTRENAMIENTO Y DÍAS
         Card(
             colors = CardDefaults.cardColors(containerColor = FondoTarjeta),
             shape = RoundedCornerShape(16.dp)
@@ -423,7 +435,6 @@ fun FormularioHabitos(h: Habitos, viewModel: AddAtletaViewModel) {
             }
         }
 
-        // BLOQUE 2: HORARIOS Y SUEÑO AUTOCALCULADO
         Card(
             colors = CardDefaults.cardColors(containerColor = FondoTarjeta),
             shape = RoundedCornerShape(16.dp)
@@ -500,7 +511,6 @@ fun FormularioHabitos(h: Habitos, viewModel: AddAtletaViewModel) {
             }
         }
 
-        // BLOQUE 3: ESTILO DE VIDA
         Card(
             colors = CardDefaults.cardColors(containerColor = FondoTarjeta),
             shape = RoundedCornerShape(16.dp)
@@ -528,7 +538,6 @@ fun FormularioHabitos(h: Habitos, viewModel: AddAtletaViewModel) {
     }
 }
 
-// 🟢 COMPOSABLE AUXILIAR: Chips de selección directa de días de la semana
 @Composable
 fun SelectorDiasSemanaEstricto(
     diasSeleccionados: String,
@@ -572,7 +581,6 @@ fun SelectorDiasSemanaEstricto(
     }
 }
 
-// 🟢 HELPER MATEMÁTICO: Recalcula horas de sueño al mover cualquier hora
 private fun calcularHorasSuenoMatematico(horaDormir: String, horaDespertar: String): Double {
     return try {
         val partesDormir = horaDormir.split(":")
@@ -964,7 +972,6 @@ fun KmpTimePickerDialog(
     onDismiss: () -> Unit,
     onTimeSelected: (String) -> Unit
 ) {
-    // Estado nativo de Material 3 para el reloj
     val timePickerState = rememberTimePickerState(
         initialHour = 6,
         initialMinute = 0,
@@ -987,7 +994,6 @@ fun KmpTimePickerDialog(
                 modifier = Modifier.fillMaxWidth(),
                 contentAlignment = Alignment.Center
             ) {
-                // Componente nativo de reloj con dial táctil
                 TimePicker(
                     state = timePickerState,
                     colors = TimePickerDefaults.colors(

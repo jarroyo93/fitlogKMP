@@ -2,6 +2,13 @@ package dev.josearroyo.fitlog.data.model
 
 import kotlinx.serialization.Serializable
 
+
+@Serializable
+enum class Sexo(val etiqueta: String) {
+    MASCULINO("Masculino"),
+    FEMENINO("Femenino"),
+    OTRO("Otro")
+}
 @Serializable
 enum class EstadoSuscripcion { ACTIVO, SUSPENDIDO, VENCIDO, HUERFANO }
 
@@ -53,6 +60,7 @@ data class Usuario(
     val fechaNacimiento: Long = 0L,
 
     val tipoSangre: String = "",
+    val sexo: Sexo = Sexo.MASCULINO,
     val nacionalidad: String = "",
     val telefono: String = "",
     val planActivo: String = "Ninguno",
