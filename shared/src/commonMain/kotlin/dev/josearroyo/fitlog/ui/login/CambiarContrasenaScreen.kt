@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ExitToApp
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.*
@@ -21,7 +22,9 @@ import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import dev.josearroyo.fitlog.repository.AuthRepository
 import dev.josearroyo.fitlog.viewmodel.AuthViewModel
+import kotlinx.coroutines.launch
 
 private val TextoSecundario = Color(0xFFB3AEC6)
 
@@ -29,16 +32,26 @@ private val TextoSecundario = Color(0xFFB3AEC6)
 @Composable
 fun CambiarContrasenaScreen(
     uid: String,
-    onPasswordChangedSuccess: () -> Unit
+    onPasswordChangedSuccess: () -> Unit,
+    onLogout: () -> Unit
 ) {
     val viewModel: AuthViewModel = viewModel { AuthViewModel() }
     val state by viewModel.activationState.collectAsState()
+    val scope = rememberCoroutineScope()
+    val authRepository = remember { AuthRepository() }
 
     var contrasena by remember { mutableStateOf("") }
     var confirmarContrasena by remember { mutableStateOf("") }
 
     var passwordVisible by remember { mutableStateOf(false) }
     var confirmPasswordVisible by remember { mutableStateOf(false) }
+
+    val handleLogout = {
+        scope.launch {
+            authRepository.logout()
+            onLogout()
+        }
+    }
 
     LaunchedEffect(state.isSuccess) {
         if (state.isSuccess) {
@@ -55,7 +68,16 @@ fun CambiarContrasenaScreen(
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = FondoOscuro,
                     titleContentColor = Color.White
-                )
+                ),
+                actions = {
+                    IconButton(onClick = { handleLogout() }) {
+                        Icon(
+                            imageVector = Icons.Default.ExitToApp,
+                            contentDescription = "Cerrar Sesión",
+                            tint = NaranjaAcento
+                        )
+                    }
+                }
             )
         }
     ) { paddingValues ->
@@ -204,6 +226,12 @@ fun CambiarContrasenaScreen(
                         color = if (isButtonEnable) FondoOscuro else NaranjaAcento
                     )
                 }
+            }
+
+            TextButton(onClick = { handleLogout() }) {
+                Icon(Icons.Default.ExitToApp, contentDescription = null, tint = TextoSecundario)
+                Spacer(modifier = Modifier.width(6.dp))
+                Text("Cerrar Sesión", color = TextoSecundario, fontWeight = FontWeight.Medium)
             }
         }
     }

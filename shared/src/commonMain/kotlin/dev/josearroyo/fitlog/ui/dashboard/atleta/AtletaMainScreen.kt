@@ -114,7 +114,7 @@ fun AtletaMainScreen(
 
     Column(modifier = modifier.fillMaxSize().background(FondoOscuro)) {
 
-        // 1. Cabecera Estática Superior (Fila rígida manual)
+        // 1. Cabecera Estática Superior
         if (!esPantallaEntrenar && estadoReal == EstadoSuscripcion.ACTIVO) {
             Row(
                 modifier = Modifier
@@ -133,7 +133,7 @@ fun AtletaMainScreen(
             }
         }
 
-        // 2. Contenedor del Cuerpo Central (Ocupa el espacio dinámico seguro)
+        // 2. Contenedor del Cuerpo Central
         Box(
             modifier = Modifier
                 .weight(1f)
@@ -156,14 +156,45 @@ fun AtletaMainScreen(
                                     isActionLoading = false
                                 }
                             },
-                            onLogout = onLogout
+                            onLogout = {
+                                scope.launch {
+                                    authRepository.logout()
+                                    onLogout()
+                                }
+                            }
                         )
                     }
                     EstadoSuscripcion.SUSPENDIDO -> {
-                        PantallaRestringida(titulo = "Cuenta Congelada", mensaje = "Tu plan de entrenamiento está pausado. Comunícate con tu coach.", textoBotonPrincipal = "Actualizar Estado", isActionLoading = isActionLoading, onAccionPrincipal = { recargarEstado() }, onDesvincularClick = { showDesvincularDialog = true }, onLogout = onLogout)
+                        PantallaRestringida(
+                            titulo = "Cuenta Congelada",
+                            mensaje = "Tu plan de entrenamiento está pausado. Comunícate con tu coach.",
+                            textoBotonPrincipal = "Actualizar Estado",
+                            isActionLoading = isActionLoading,
+                            onAccionPrincipal = { recargarEstado() },
+                            onDesvincularClick = { showDesvincularDialog = true },
+                            onLogout = {
+                                scope.launch {
+                                    authRepository.logout()
+                                    onLogout()
+                                }
+                            }
+                        )
                     }
                     EstadoSuscripcion.VENCIDO -> {
-                        PantallaRestringida(titulo = "Plan Vencido", mensaje = "Tu ciclo ha terminado. Solicita la renovación a tu entrenador.", textoBotonPrincipal = "Actualizar Estado", isActionLoading = isActionLoading, onAccionPrincipal = { recargarEstado() }, onDesvincularClick = { showDesvincularDialog = true }, onLogout = onLogout)
+                        PantallaRestringida(
+                            titulo = "Plan Vencido",
+                            mensaje = "Tu ciclo ha terminado. Solicita la renovación a tu entrenador.",
+                            textoBotonPrincipal = "Actualizar Estado",
+                            isActionLoading = isActionLoading,
+                            onAccionPrincipal = { recargarEstado() },
+                            onDesvincularClick = { showDesvincularDialog = true },
+                            onLogout = {
+                                scope.launch {
+                                    authRepository.logout()
+                                    onLogout()
+                                }
+                            }
+                        )
                     }
                     EstadoSuscripcion.ACTIVO -> {
                         NavHost(
@@ -193,7 +224,7 @@ fun AtletaMainScreen(
                             composable(BottomNavItem.AtletaPerfil.route) {
                                 PerfilAtletaTab(
                                     uid = uid,
-                                    atletaFallback = usuario!!, // 🟢 Pasado como salvaguarda estricta de inferencia
+                                    atletaFallback = usuario!!,
                                     onLogout = {
                                         scope.launch {
                                             authRepository.logout()
@@ -391,6 +422,14 @@ fun PantallaRestringida(
                 ) {
                     Text(text = "Desvincularme de este entrenador", fontWeight = FontWeight.Medium)
                 }
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                TextButton(onClick = onLogout) {
+                    Icon(Icons.Default.ExitToApp, contentDescription = null, tint = TextoSecundario)
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text("Cerrar Sesión", color = TextoSecundario, fontWeight = FontWeight.Medium)
+                }
             }
         }
     }
@@ -445,7 +484,14 @@ fun PantallaHuerfano(
                 placeholder = { Text("ejemplo@entrenador.com", color = TextoSecundario.copy(alpha = 0.3f)) },
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true,
-                colors = OutlinedTextFieldDefaults.colors(focusedTextColor = Color.White, unfocusedTextColor = Color.White, focusedBorderColor = NaranjaAcento, unfocusedBorderColor = TextoSecundario.copy(alpha = 0.4f), focusedContainerColor = FondoTarjeta, unfocusedContainerColor = FondoTarjeta)
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedTextColor = Color.White,
+                    unfocusedTextColor = Color.White,
+                    focusedBorderColor = NaranjaAcento,
+                    unfocusedBorderColor = TextoSecundario.copy(alpha = 0.4f),
+                    focusedContainerColor = FondoTarjeta,
+                    unfocusedContainerColor = FondoTarjeta
+                )
             )
 
             Spacer(modifier = Modifier.height(12.dp))
@@ -466,7 +512,15 @@ fun PantallaHuerfano(
                         Text("Correo o Código incorrecto / expirado", color = Color(0xFFE57373))
                     }
                 },
-                colors = OutlinedTextFieldDefaults.colors(focusedTextColor = Color.White, unfocusedTextColor = Color.White, focusedBorderColor = NaranjaAcento, unfocusedBorderColor = TextoSecundario.copy(alpha = 0.4f), focusedContainerColor = FondoTarjeta, unfocusedContainerColor = FondoTarjeta, errorContainerColor = FondoTarjeta)
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedTextColor = Color.White,
+                    unfocusedTextColor = Color.White,
+                    focusedBorderColor = NaranjaAcento,
+                    unfocusedBorderColor = TextoSecundario.copy(alpha = 0.4f),
+                    focusedContainerColor = FondoTarjeta,
+                    unfocusedContainerColor = FondoTarjeta,
+                    errorContainerColor = FondoTarjeta
+                )
             )
 
             Spacer(modifier = Modifier.height(24.dp))
@@ -488,6 +542,14 @@ fun PantallaHuerfano(
                 ) {
                     Text(text = "Vincular Cuenta", fontWeight = FontWeight.Bold)
                 }
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                TextButton(onClick = onLogout) {
+                    Icon(Icons.Default.ExitToApp, contentDescription = null, tint = TextoSecundario)
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text("Cerrar Sesión", color = TextoSecundario, fontWeight = FontWeight.Medium)
+                }
             }
         }
     }
@@ -496,12 +558,11 @@ fun PantallaHuerfano(
 @Composable
 fun PerfilAtletaTab(
     uid: String,
-    atletaFallback: Usuario, // 🟢 Tipo Explícito inalterable: Resuelve el error de inferencia de $T$
+    atletaFallback: Usuario,
     onLogout: () -> Unit,
     onDesvincularClick: () -> Unit,
     onEditDatosPersonalesClick: () -> Unit
 ) {
-    // Instanciación explícita con la lambda Factory requerida por KMP
     val perfilViewModel: PerfilAtletaViewModel = viewModel { PerfilAtletaViewModel() }
     val uiState by perfilViewModel.uiState.collectAsState()
     var mostrarEntrenadorSheet by remember { mutableStateOf(false) }
@@ -510,7 +571,6 @@ fun PerfilAtletaTab(
         perfilViewModel.cargarPerfil(uid)
     }
 
-    // ⚡ PROTECCIÓN DE TIPADO: Si el ViewModel aún carga, se asume el Fallback tipado de la sesión
     val atleta: Usuario = uiState.usuarioLogueado ?: atletaFallback
 
     Column(
@@ -543,7 +603,6 @@ fun PerfilAtletaTab(
                 Column {
                     Text("Plan Activo: ${atleta.planActivo}", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 16.sp)
                     atleta.vencimientoSuscripcion?.let { fechaLong ->
-                        // El compilador ahora sabe con certeza absoluta que 'fechaLong' es un Long primitivo
                         val fechaStr = formatearFechaHistorial(fechaLong)
                         Text("Vence: $fechaStr", color = TextoSecundario, fontSize = 13.sp)
                     }

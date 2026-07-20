@@ -111,6 +111,11 @@ fun AppNavigation() {
                     navController.navigate("dashboard_atleta/$uid") {
                         popUpTo("cambiar_password/$uid") { inclusive = true }
                     }
+                },
+                onLogout = {
+                    navController.navigate("login") {
+                        popUpTo(0) { inclusive = true }
+                    }
                 }
             )
         }
