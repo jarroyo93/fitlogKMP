@@ -12,7 +12,7 @@
     <string>Apple Distribution</string>
     <key>provisioningProfiles</key>
     <dict>
-        <key>com.tuempresa.tuapp</key>
+        <key>dev.josearroyo.fitlog</key>
         <string>Nombre_De_Tu_Perfil_Provisioning</string>
     </dict>
 </dict>
