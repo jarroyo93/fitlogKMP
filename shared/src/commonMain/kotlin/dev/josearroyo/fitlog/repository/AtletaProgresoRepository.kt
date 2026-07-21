@@ -33,7 +33,7 @@ class AtletaProgresoRepository {
         }
     }
 
-    suspend fun obtenerUltimosPesajes(atletaId: String, limite: Long = 5): List<Pesaje> {
+    suspend fun obtenerUltimosPesajes(atletaId: String, limite: Long = 20): List<Pesaje> {
         return try {
             val snapshot = db.collection("users").document(atletaId)
                 .collection("pesajes")
@@ -52,6 +52,21 @@ class AtletaProgresoRepository {
     // ============================================================
     // HISTORIAL Y CICLOS DE ENTRENAMIENTO
     // ============================================================
+    suspend fun obtenerHistorialCiclos(atletaId: String): List<CicloEntrenamiento> {
+        return try {
+            val snapshot = db.collection("users").document(atletaId)
+                .collection("ciclos_entrenamiento")
+                .orderBy("fechaInicio", Direction.DESCENDING)
+                .get()
+
+            snapshot.documents.map { doc -> doc.data<CicloEntrenamiento>().copy(id = doc.id) }
+        } catch (e: Exception) {
+            println("🔥 [AtletaProgresoRepository] Error al obtener historial de ciclos: ${e.message}")
+            e.printStackTrace()
+            emptyList()
+        }
+    }
+
     suspend fun obtenerHistorialEntrenamientos(atletaId: String): List<SesionEntrenamiento> {
         return try {
             val snapshot = db.collection("users").document(atletaId)
@@ -116,13 +131,14 @@ class AtletaProgresoRepository {
                     }
                 }
 
-                val fechaCierreCalculada = calcularFechaCierreCiclo(ahoraMilis)
+                val fechaInicioReal = minOf(ahoraMilis, sesionFinal.fechaEjecucion)
+                val fechaCierreCalculada = calcularFechaCierreCiclo(fechaInicioReal)
 
                 val nuevoCiclo = CicloEntrenamiento(
                     id = cicloIdToUse,
                     atletaId = atletaId,
                     rutinaAsignadaId = sesionFinal.rutinaAsignadaId,
-                    fechaInicio = ahoraMilis,
+                    fechaInicio = fechaInicioReal,
                     fechaCierre = fechaCierreCalculada,
                     estaActivo = true,
                     metaSesionesAsignadas = metaSesiones,
