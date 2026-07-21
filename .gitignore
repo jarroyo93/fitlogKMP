@@ -25,3 +25,13 @@ node_modules/
 .gradle/
 .idea/
 **/build/
+
+# Apple Certificates & Keys (¡NUNCA SUBIR A GITHUB!)
+private.key
+request.certSigningRequest
+*.p12
+*.pem
+*.cer
+*.mobileprovision
+p12_base64.txt
+profile_base64.txt
