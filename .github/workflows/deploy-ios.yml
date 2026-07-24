@@ -57,6 +57,9 @@ jobs:
         with:
           xcode-version: '16.2.0'
 
+      - name: Build KMP Shared Framework
+        run: ./gradlew :shared:embedAndSignAppleFrameworkForXcode
+
       - name: Install CocoaPods Dependencies
         run: |
           cd iosApp
