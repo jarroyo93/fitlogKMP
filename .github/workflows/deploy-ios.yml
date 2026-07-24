@@ -38,7 +38,7 @@ jobs:
           security set-keychain-settings -lut 21600 $KEYCHAIN_PATH
           security unlock-keychain -p "$KEYCHAIN_PASSWORD" $KEYCHAIN_PATH
           
-          # Hacer que el llavero temporal sea el predeterminado en la búsqueda
+          # Hacer que el llavero temporal sea el predeterminado
           security list-keychains -s $KEYCHAIN_PATH $(security list-keychains | tr -d '"')
           security default-keychain -s $KEYCHAIN_PATH
           
@@ -54,11 +54,11 @@ jobs:
           PROFILE_UUID=$(security cms -D -i $RUNNER_TEMP/app.mobileprovision | plutil -extract UUID raw -)
           PROFILE_NAME=$(security cms -D -i $RUNNER_TEMP/app.mobileprovision | plutil -extract Name raw -)
           
-          # Instalar perfil con el nombre de su UUID
+          # Instalar perfil
           mkdir -p ~/Library/MobileDevice/Provisioning\ Profiles
           cp $RUNNER_TEMP/app.mobileprovision ~/Library/MobileDevice/Provisioning\ Profiles/$PROFILE_UUID.mobileprovision
           
-          # Pasar el nombre del perfil a las siguientes etapas
+          # Guardar variable de entorno
           echo "PROVISIONING_PROFILE_SPECIFIER=$PROFILE_NAME" >> $GITHUB_ENV
 
       - name: Select Xcode 16
@@ -66,9 +66,23 @@ jobs:
         with:
           xcode-version: '16.2.0'
 
+      - name: Install Pods (if Podfile exists)
+        run: |
+          cd iosApp
+          if [ -f "Podfile" ]; then
+            pod install
+          fi
+
       - name: Build Xcode Archive
         run: |
-          xcodebuild -project iosApp/iosApp.xcodeproj \
+          # Detectar si se debe usar .xcworkspace o .xcodeproj
+          if [ -d "iosApp/iosApp.xcworkspace" ]; then
+            BUILD_TARGET="-workspace iosApp/iosApp.xcworkspace"
+          else
+            BUILD_TARGET="-project iosApp/iosApp.xcodeproj"
+          fi
+          
+          xcodebuild $BUILD_TARGET \
                      -scheme iosApp \
                      -sdk iphoneos \
                      -configuration Release \
