@@ -8,6 +8,7 @@ on:
 jobs:
   build-and-deploy:
     runs-on: macos-15
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -15,14 +16,39 @@ jobs:
       - name: Set up JDK
         uses: actions/setup-java@v4
         with:
-          distribution: 'temurin'
+          distribution: temurin
           java-version: '17'
 
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v3
 
+      - name: Select Xcode
+        uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: "16.4"
+
+      - name: Show Xcode Version
+        run: |
+          xcodebuild -version
+          xcode-select -p
+
+      - name: Show Gradle Version
+        run: ./gradlew --version
+
       - name: Make gradlew executable
         run: chmod +x ./gradlew
+
+      - name: List Shared Tasks
+        run: ./gradlew :shared:tasks --all
+
+      - name: Show Shared Dependencies
+        run: ./gradlew :shared:dependencies
+
+      - name: Show Dependency Insight
+        run: |
+          ./gradlew :shared:dependencyInsight \
+            --dependency org.jetbrains.compose \
+            --configuration commonMainCompileDependencyConfiguration || true
 
       - name: Install Apple Certificate & Provisioning Profile
         env:
@@ -32,27 +58,33 @@ jobs:
         run: |
           KEYCHAIN_PATH=$RUNNER_TEMP/app-signing.keychain-db
           KEYCHAIN_PASSWORD=$(openssl rand -base64 12)
-          
-          security create-keychain -p "$KEYCHAIN_PASSWORD" $KEYCHAIN_PATH
-          security set-keychain-settings -lut 21600 $KEYCHAIN_PATH
-          security unlock-keychain -p "$KEYCHAIN_PASSWORD" $KEYCHAIN_PATH
-          
-          security list-keychains -s $KEYCHAIN_PATH $(security list-keychains | tr -d '"')
-          security default-keychain -s $KEYCHAIN_PATH
-          
-          echo "$BUILD_CERTIFICATE_BASE64" | base64 --decode > $RUNNER_TEMP/build_certificate.p12
-          security import $RUNNER_TEMP/build_certificate.p12 -k $KEYCHAIN_PATH -P "$P12_PASSWORD" -T /usr/bin/codesign
-          security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "$KEYCHAIN_PASSWORD" $KEYCHAIN_PATH
-          
-          echo "$BUILD_PROVISION_PROFILE_BASE64" | base64 --decode > $RUNNER_TEMP/app.mobileprovision
-          PROFILE_UUID=$(security cms -D -i $RUNNER_TEMP/app.mobileprovision | plutil -extract UUID raw -)
-          mkdir -p ~/Library/MobileDevice/Provisioning\ Profiles
-          cp $RUNNER_TEMP/app.mobileprovision ~/Library/MobileDevice/Provisioning\ Profiles/$PROFILE_UUID.mobileprovision
 
-      - name: Select Xcode
-        uses: maxim-lobanov/setup-xcode@v1
-        with:
-          xcode-version: '16.4'
+          security create-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+          security set-keychain-settings -lut 21600 "$KEYCHAIN_PATH"
+          security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+
+          security list-keychains -s "$KEYCHAIN_PATH" $(security list-keychains | tr -d '"')
+          security default-keychain -s "$KEYCHAIN_PATH"
+
+          echo "$BUILD_CERTIFICATE_BASE64" | base64 --decode > "$RUNNER_TEMP/build_certificate.p12"
+          security import "$RUNNER_TEMP/build_certificate.p12" \
+            -k "$KEYCHAIN_PATH" \
+            -P "$P12_PASSWORD" \
+            -T /usr/bin/codesign
+
+          security set-key-partition-list \
+            -S apple-tool:,apple:,codesign: \
+            -s \
+            -k "$KEYCHAIN_PASSWORD" \
+            "$KEYCHAIN_PATH"
+
+          echo "$BUILD_PROVISION_PROFILE_BASE64" | base64 --decode > "$RUNNER_TEMP/app.mobileprovision"
+
+          PROFILE_UUID=$(security cms -D -i "$RUNNER_TEMP/app.mobileprovision" | plutil -extract UUID raw -)
+
+          mkdir -p ~/Library/MobileDevice/Provisioning\ Profiles
+          cp "$RUNNER_TEMP/app.mobileprovision" \
+             ~/Library/MobileDevice/Provisioning\ Profiles/$PROFILE_UUID.mobileprovision
 
       - name: Install CocoaPods Dependencies
         run: |
@@ -61,21 +93,21 @@ jobs:
 
       - name: Build Xcode Archive
         run: |
-          xcodebuild -workspace iosApp/iosApp.xcworkspace \
-                     -scheme iosApp \
-                     -sdk iphoneos \
-                     -configuration Release \
-                     -archivePath $RUNNER_TEMP/iosApp.xcarchive \
-                     -quiet \
-                     archive
+          xcodebuild \
+            -workspace iosApp/iosApp.xcworkspace \
+            -scheme iosApp \
+            -sdk iphoneos \
+            -configuration Release \
+            -archivePath $RUNNER_TEMP/iosApp.xcarchive \
+            archive
 
       - name: Export IPA
         run: |
-          xcodebuild -exportArchive \
-                     -archivePath $RUNNER_TEMP/iosApp.xcarchive \
-                     -exportOptionsPlist iosApp/ExportOptions.plist \
-                     -exportPath $RUNNER_TEMP/output \
-                     -quiet
+          xcodebuild \
+            -exportArchive \
+            -archivePath $RUNNER_TEMP/iosApp.xcarchive \
+            -exportOptionsPlist iosApp/ExportOptions.plist \
+            -exportPath $RUNNER_TEMP/output
 
       - name: Upload to TestFlight
         uses: apple-actions/upload-testflight-build@v4
