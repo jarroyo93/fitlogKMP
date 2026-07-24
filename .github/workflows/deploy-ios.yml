@@ -66,15 +66,14 @@ jobs:
         with:
           xcode-version: '16.2.0'
 
-      - name: Resolve Swift Package Dependencies
+      - name: Install CocoaPods Dependencies
         run: |
-          xcodebuild -resolvePackageDependencies \
-                     -project iosApp/iosApp.xcodeproj \
-                     -scheme iosApp
+          cd iosApp
+          pod install
 
       - name: Build Xcode Archive
         run: |
-          xcodebuild -project iosApp/iosApp.xcodeproj \
+          xcodebuild -workspace iosApp/iosApp.xcworkspace \
                      -scheme iosApp \
                      -sdk iphoneos \
                      -configuration Release \
