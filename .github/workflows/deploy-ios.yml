@@ -38,6 +38,10 @@ jobs:
           security set-keychain-settings -lut 21600 $KEYCHAIN_PATH
           security unlock-keychain -p "$KEYCHAIN_PASSWORD" $KEYCHAIN_PATH
           
+          # Hacer que el llavero temporal sea el predeterminado en la búsqueda
+          security list-keychains -s $KEYCHAIN_PATH $(security list-keychains | tr -d '"')
+          security default-keychain -s $KEYCHAIN_PATH
+          
           # Importar Certificado P12
           echo "$BUILD_CERTIFICATE_BASE64" | base64 --decode > $RUNNER_TEMP/build_certificate.p12
           security import $RUNNER_TEMP/build_certificate.p12 -k $KEYCHAIN_PATH -P "$P12_PASSWORD" -T /usr/bin/codesign
@@ -70,6 +74,7 @@ jobs:
                      -configuration Release \
                      -archivePath $RUNNER_TEMP/iosApp.xcarchive \
                      DEVELOPMENT_TEAM=H4B298YYFN \
+                     PRODUCT_BUNDLE_IDENTIFIER="dev.josearroyo.fitlog" \
                      CODE_SIGN_STYLE=Manual \
                      CODE_SIGN_IDENTITY="Apple Distribution" \
                      PROVISIONING_PROFILE_SPECIFIER="$PROVISIONING_PROFILE_SPECIFIER" \
