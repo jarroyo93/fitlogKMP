@@ -66,23 +66,15 @@ jobs:
         with:
           xcode-version: '16.2.0'
 
-      - name: Install Pods (if Podfile exists)
+      - name: Resolve Swift Package Dependencies
         run: |
-          cd iosApp
-          if [ -f "Podfile" ]; then
-            pod install
-          fi
+          xcodebuild -resolvePackageDependencies \
+                     -project iosApp/iosApp.xcodeproj \
+                     -scheme iosApp
 
       - name: Build Xcode Archive
         run: |
-          # Detectar si se debe usar .xcworkspace o .xcodeproj
-          if [ -d "iosApp/iosApp.xcworkspace" ]; then
-            BUILD_TARGET="-workspace iosApp/iosApp.xcworkspace"
-          else
-            BUILD_TARGET="-project iosApp/iosApp.xcodeproj"
-          fi
-          
-          xcodebuild $BUILD_TARGET \
+          xcodebuild -project iosApp/iosApp.xcodeproj \
                      -scheme iosApp \
                      -sdk iphoneos \
                      -configuration Release \
