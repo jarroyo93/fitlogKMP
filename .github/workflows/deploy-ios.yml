@@ -57,6 +57,8 @@ jobs:
                      -sdk iphoneos \
                      -configuration Release \
                      -archivePath $RUNNER_TEMP/iosApp.xcarchive \
+                     DEVELOPMENT_TEAM=H4B298YYFN \
+                     CODE_SIGN_STYLE=Manual \
                      archive
 
       - name: Export IPA
