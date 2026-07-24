@@ -66,6 +66,19 @@ jobs:
         with:
           xcode-version: '16.2.0'
 
+      - name: Apply Provisioning Profile to iosApp Target
+        run: |
+          python3 -c '
+          import os
+          path = "iosApp/iosApp.xcodeproj/project.pbxproj"
+          profile = os.environ.get("PROVISIONING_PROFILE_SPECIFIER", "")
+          with open(path, "r") as f:
+              content = f.read()
+          content = content.replace("DEVELOPMENT_TEAM = H4B298YYFN;", f"DEVELOPMENT_TEAM = H4B298YYFN;\n\t\t\t\tPROVISIONING_PROFILE_SPECIFIER = \"{profile}\";")
+          with open(path, "w") as f:
+              f.write(content)
+          '
+
       - name: Install CocoaPods Dependencies
         run: |
           cd iosApp
