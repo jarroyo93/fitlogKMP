@@ -33,7 +33,6 @@ jobs:
           KEYCHAIN_PATH=$RUNNER_TEMP/app-signing.keychain-db
           KEYCHAIN_PASSWORD=$(openssl rand -base64 12)
           
-          # Crear e importar Keychain
           security create-keychain -p "$KEYCHAIN_PASSWORD" $KEYCHAIN_PATH
           security set-keychain-settings -lut 21600 $KEYCHAIN_PATH
           security unlock-keychain -p "$KEYCHAIN_PASSWORD" $KEYCHAIN_PATH
@@ -41,12 +40,10 @@ jobs:
           security list-keychains -s $KEYCHAIN_PATH $(security list-keychains | tr -d '"')
           security default-keychain -s $KEYCHAIN_PATH
           
-          # Importar P12
           echo "$BUILD_CERTIFICATE_BASE64" | base64 --decode > $RUNNER_TEMP/build_certificate.p12
           security import $RUNNER_TEMP/build_certificate.p12 -k $KEYCHAIN_PATH -P "$P12_PASSWORD" -T /usr/bin/codesign
           security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "$KEYCHAIN_PASSWORD" $KEYCHAIN_PATH
           
-          # Instalar Provisioning Profile
           echo "$BUILD_PROVISION_PROFILE_BASE64" | base64 --decode > $RUNNER_TEMP/app.mobileprovision
           PROFILE_UUID=$(security cms -D -i $RUNNER_TEMP/app.mobileprovision | plutil -extract UUID raw -)
           mkdir -p ~/Library/MobileDevice/Provisioning\ Profiles
@@ -56,9 +53,6 @@ jobs:
         uses: maxim-lobanov/setup-xcode@v1
         with:
           xcode-version: '16.2.0'
-
-      - name: Build KMP Shared Framework
-        run: ./gradlew :shared:embedAndSignAppleFrameworkForXcode
 
       - name: Install CocoaPods Dependencies
         run: |
