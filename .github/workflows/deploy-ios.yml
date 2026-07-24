@@ -96,6 +96,7 @@ jobs:
                      PRODUCT_BUNDLE_IDENTIFIER="dev.josearroyo.fitlog" \
                      CODE_SIGN_STYLE=Manual \
                      CODE_SIGN_IDENTITY="Apple Distribution" \
+                     -quiet \
                      archive
 
       - name: Export IPA
@@ -103,7 +104,8 @@ jobs:
           xcodebuild -exportArchive \
                      -archivePath $RUNNER_TEMP/iosApp.xcarchive \
                      -exportOptionsPlist iosApp/ExportOptions.plist \
-                     -exportPath $RUNNER_TEMP/output
+                     -exportPath $RUNNER_TEMP/output \
+                     -quiet
 
       - name: Upload to TestFlight
         uses: apple-actions/upload-testflight-build@v4
