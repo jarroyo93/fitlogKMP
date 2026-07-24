@@ -44,7 +44,7 @@ class HistorialFacturacionViewModel : ViewModel() {
         }
     }
 
-    fun añadirPlanAHistorial(
+    fun anadirPlanAHistorial(
         atletaId: String,
         entrenadorId: String,
         plan: TipoPlanSuscripcion,

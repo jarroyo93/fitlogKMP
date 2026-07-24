@@ -39,19 +39,19 @@ fun HistorialFacturacionScreen(
     viewModel: HistorialFacturacionViewModel = viewModel()
 ) {
     val state by viewModel.state.collectAsState()
-    var mostrarDialogAñadir by remember { mutableStateOf(false) }
+    var mostrarDialogAnadir by remember { mutableStateOf(false) }
 
     LaunchedEffect(atletaId) {
         viewModel.cargarHistorial(atletaId)
     }
 
-    if (mostrarDialogAñadir) {
+    if (mostrarDialogAnadir) {
         RenovarSuscripcionDialog(
             atletaNombre = state.atleta?.nombres ?: "Atleta",
-            onDismiss = { mostrarDialogAñadir = false },
+            onDismiss = { mostrarDialogAnadir = false },
             onRenovar = { plan, dias, iniciarInmediato, fechaSeleccionadaMilis ->
                 // 🟢 CORRECCIÓN: Quitamos el '.time' porque 'fechaSeleccionadaMilis' ya es un Long puro
-                viewModel.añadirPlanAHistorial(
+                viewModel.anadirPlanAHistorial(
                     atletaId = atletaId,
                     entrenadorId = entrenadorId,
                     plan = plan,
@@ -59,7 +59,7 @@ fun HistorialFacturacionScreen(
                     iniciarEnseguida = iniciarInmediato,
                     fechaInicioSeleccionadaMilis = fechaSeleccionadaMilis
                 )
-                mostrarDialogAñadir = false
+                mostrarDialogAnadir = false
             }
         )
     }
@@ -94,7 +94,7 @@ fun HistorialFacturacionScreen(
         floatingActionButton = {
             if (!state.isLoading) {
                 FloatingActionButton(
-                    onClick = { mostrarDialogAñadir = true },
+                    onClick = { mostrarDialogAnadir = true },
                     containerColor = NaranjaAcento,
                     contentColor = FondoOscuro,
                     shape = CircleShape
