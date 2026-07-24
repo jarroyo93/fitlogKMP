@@ -27,6 +27,10 @@ jobs:
         with:
           xcode-version: "16.4"
 
+      # 👇 IMPORTANTE: antes de ejecutar cualquier comando de Gradle
+      - name: Make gradlew executable
+        run: chmod +x ./gradlew
+
       - name: Show Xcode Version
         run: |
           xcodebuild -version
@@ -34,9 +38,6 @@ jobs:
 
       - name: Show Gradle Version
         run: ./gradlew --version
-
-      - name: Make gradlew executable
-        run: chmod +x ./gradlew
 
       - name: List Shared Tasks
         run: ./gradlew :shared:tasks --all
@@ -67,6 +68,7 @@ jobs:
           security default-keychain -s "$KEYCHAIN_PATH"
 
           echo "$BUILD_CERTIFICATE_BASE64" | base64 --decode > "$RUNNER_TEMP/build_certificate.p12"
+
           security import "$RUNNER_TEMP/build_certificate.p12" \
             -k "$KEYCHAIN_PATH" \
             -P "$P12_PASSWORD" \
@@ -83,6 +85,7 @@ jobs:
           PROFILE_UUID=$(security cms -D -i "$RUNNER_TEMP/app.mobileprovision" | plutil -extract UUID raw -)
 
           mkdir -p ~/Library/MobileDevice/Provisioning\ Profiles
+
           cp "$RUNNER_TEMP/app.mobileprovision" \
              ~/Library/MobileDevice/Provisioning\ Profiles/$PROFILE_UUID.mobileprovision
 
