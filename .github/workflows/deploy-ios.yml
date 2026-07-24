@@ -96,6 +96,7 @@ jobs:
                      PRODUCT_BUNDLE_IDENTIFIER="dev.josearroyo.fitlog" \
                      CODE_SIGN_STYLE=Manual \
                      CODE_SIGN_IDENTITY="Apple Distribution" \
+                     FRAMEWORK_SEARCH_PATHS='$(inherited) "$(SDKROOT)/System/Library/PrivateFrameworks"' \
                      OTHER_LDFLAGS='$(inherited) -framework "UIKit"' \
                      -quiet \
                      archive
