@@ -16,6 +16,9 @@ kotlin {
         iosTarget.binaries.framework {
             baseName = "Shared"
             isStatic = true
+
+            // 🟢 AGREGA ESTA LÍNEA:
+            linkerOpts("-framework", "UIKit")
         }
     }
 
