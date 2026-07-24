@@ -27,7 +27,6 @@ jobs:
         with:
           xcode-version: "16.4"
 
-      # 👇 IMPORTANTE: antes de ejecutar cualquier comando de Gradle
       - name: Make gradlew executable
         run: chmod +x ./gradlew
 
@@ -111,6 +110,25 @@ jobs:
             -archivePath $RUNNER_TEMP/iosApp.xcarchive \
             -exportOptionsPlist iosApp/ExportOptions.plist \
             -exportPath $RUNNER_TEMP/output
+
+      - name: Verify IPA
+        run: |
+          echo "========== OUTPUT =========="
+          ls -lah $RUNNER_TEMP/output
+
+          echo ""
+          echo "========== FILE =========="
+          file $RUNNER_TEMP/output/iosApp.ipa
+
+          echo ""
+          echo "========== ZIP CONTENT =========="
+          unzip -l $RUNNER_TEMP/output/iosApp.ipa | head -40
+
+      - name: Upload IPA Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: iosApp-ipa
+          path: ${{ runner.temp }}/output/iosApp.ipa
 
       - name: Upload to TestFlight
         uses: apple-actions/upload-testflight-build@v4
