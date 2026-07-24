@@ -17,7 +17,6 @@ kotlin {
             baseName = "Shared"
             isStatic = true
 
-            // 🟢 AGREGA ESTA LÍNEA:
             linkerOpts("-framework", "UIKit")
         }
     }
