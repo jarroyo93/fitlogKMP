@@ -33,17 +33,29 @@ jobs:
           KEYCHAIN_PATH=$RUNNER_TEMP/app-signing.keychain-db
           KEYCHAIN_PASSWORD=$(openssl rand -base64 12)
           
+          # Crear e importar llavero (Keychain)
           security create-keychain -p "$KEYCHAIN_PASSWORD" $KEYCHAIN_PATH
           security set-keychain-settings -lut 21600 $KEYCHAIN_PATH
           security unlock-keychain -p "$KEYCHAIN_PASSWORD" $KEYCHAIN_PATH
           
+          # Importar Certificado P12
           echo "$BUILD_CERTIFICATE_BASE64" | base64 --decode > $RUNNER_TEMP/build_certificate.p12
           security import $RUNNER_TEMP/build_certificate.p12 -k $KEYCHAIN_PATH -P "$P12_PASSWORD" -T /usr/bin/codesign
           security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "$KEYCHAIN_PASSWORD" $KEYCHAIN_PATH
           
+          # Decodificar Provisioning Profile
           echo "$BUILD_PROVISION_PROFILE_BASE64" | base64 --decode > $RUNNER_TEMP/app.mobileprovision
+          
+          # Extraer UUID y Nombre del perfil
+          PROFILE_UUID=$(security cms -D -i $RUNNER_TEMP/app.mobileprovision | plutil -extract UUID raw -)
+          PROFILE_NAME=$(security cms -D -i $RUNNER_TEMP/app.mobileprovision | plutil -extract Name raw -)
+          
+          # Instalar perfil con el nombre de su UUID
           mkdir -p ~/Library/MobileDevice/Provisioning\ Profiles
-          cp $RUNNER_TEMP/app.mobileprovision ~/Library/MobileDevice/Provisioning\ Profiles/
+          cp $RUNNER_TEMP/app.mobileprovision ~/Library/MobileDevice/Provisioning\ Profiles/$PROFILE_UUID.mobileprovision
+          
+          # Pasar el nombre del perfil a las siguientes etapas
+          echo "PROVISIONING_PROFILE_SPECIFIER=$PROFILE_NAME" >> $GITHUB_ENV
 
       - name: Select Xcode 16
         uses: maxim-lobanov/setup-xcode@v1
@@ -59,6 +71,8 @@ jobs:
                      -archivePath $RUNNER_TEMP/iosApp.xcarchive \
                      DEVELOPMENT_TEAM=H4B298YYFN \
                      CODE_SIGN_STYLE=Manual \
+                     CODE_SIGN_IDENTITY="Apple Distribution" \
+                     PROVISIONING_PROFILE_SPECIFIER="$PROVISIONING_PROFILE_SPECIFIER" \
                      archive
 
       - name: Export IPA
