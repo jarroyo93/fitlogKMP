@@ -13,7 +13,7 @@
     <key>provisioningProfiles</key>
     <dict>
         <key>dev.josearroyo.fitlog</key>
-        <string>Nombre_De_Tu_Perfil_Provisioning</string>
+        <string>FitLog_AppStore_Profile</string>
     </dict>
 </dict>
 </plist>

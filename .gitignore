@@ -17,6 +17,7 @@ captures
 !*.xcworkspace/contents.xcworkspacedata
 **/xcshareddata/WorkspaceSettings.xcsettings
 node_modules/
+
 # Firebase & Google Secrets
 **/google-services.json
 **/firebase-credentials.json
@@ -26,12 +27,14 @@ node_modules/
 .idea/
 **/build/
 
-# Apple Certificates & Keys (¡NUNCA SUBIR A GITHUB!)
+# Apple Certificates, Keys & Base64 Files (¡NUNCA SUBIR A GITHUB!)
 private.key
 request.certSigningRequest
 *.p12
 *.pem
 *.cer
+*.p8
 *.mobileprovision
 p12_base64.txt
 profile_base64.txt
+p8_base64.txt
