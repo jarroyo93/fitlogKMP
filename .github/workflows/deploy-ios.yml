@@ -2,38 +2,46 @@ name: Deploy iOS to TestFlight
 
 on:
   push:
-    branches: [ main ]
+    branches:
+      - main
   workflow_dispatch:
 
 jobs:
   build-and-deploy:
-    runs-on: macos-15
+    runs-on: macos-latest
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Set up JDK
+      - name: Set up Java
         uses: actions/setup-java@v4
         with:
           distribution: temurin
-          java-version: '17'
+          java-version: "17"
 
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v3
 
+      # Mostrar las versiones disponibles
+      - name: List Installed Xcodes
+        run: |
+          echo "Installed Xcodes:"
+          ls /Applications | grep Xcode || true
+
+      # Seleccionar Xcode 26
       - name: Select Xcode
         uses: maxim-lobanov/setup-xcode@v1
         with:
-          xcode-version: "16.4"
-
-      - name: Make gradlew executable
-        run: chmod +x ./gradlew
+          xcode-version: "26"
 
       - name: Show Xcode Version
         run: |
           xcodebuild -version
           xcode-select -p
+
+      - name: Make gradlew executable
+        run: chmod +x ./gradlew
 
       - name: Show Gradle Version
         run: ./gradlew --version
@@ -44,7 +52,7 @@ jobs:
       - name: Show Shared Dependencies
         run: ./gradlew :shared:dependencies
 
-      - name: Show Dependency Insight
+      - name: Dependency Insight
         run: |
           ./gradlew :shared:dependencyInsight \
             --dependency org.jetbrains.compose \
@@ -66,9 +74,9 @@ jobs:
           security list-keychains -s "$KEYCHAIN_PATH" $(security list-keychains | tr -d '"')
           security default-keychain -s "$KEYCHAIN_PATH"
 
-          echo "$BUILD_CERTIFICATE_BASE64" | base64 --decode > "$RUNNER_TEMP/build_certificate.p12"
+          echo "$BUILD_CERTIFICATE_BASE64" | base64 --decode > "$RUNNER_TEMP/certificate.p12"
 
-          security import "$RUNNER_TEMP/build_certificate.p12" \
+          security import "$RUNNER_TEMP/certificate.p12" \
             -k "$KEYCHAIN_PATH" \
             -P "$P12_PASSWORD" \
             -T /usr/bin/codesign
@@ -79,21 +87,21 @@ jobs:
             -k "$KEYCHAIN_PASSWORD" \
             "$KEYCHAIN_PATH"
 
-          echo "$BUILD_PROVISION_PROFILE_BASE64" | base64 --decode > "$RUNNER_TEMP/app.mobileprovision"
+          echo "$BUILD_PROVISION_PROFILE_BASE64" | base64 --decode > "$RUNNER_TEMP/profile.mobileprovision"
 
-          PROFILE_UUID=$(security cms -D -i "$RUNNER_TEMP/app.mobileprovision" | plutil -extract UUID raw -)
+          PROFILE_UUID=$(security cms -D -i "$RUNNER_TEMP/profile.mobileprovision" | plutil -extract UUID raw -)
 
           mkdir -p ~/Library/MobileDevice/Provisioning\ Profiles
 
-          cp "$RUNNER_TEMP/app.mobileprovision" \
-             ~/Library/MobileDevice/Provisioning\ Profiles/$PROFILE_UUID.mobileprovision
+          cp "$RUNNER_TEMP/profile.mobileprovision" \
+            ~/Library/MobileDevice/Provisioning\ Profiles/$PROFILE_UUID.mobileprovision
 
-      - name: Install CocoaPods Dependencies
+      - name: Install CocoaPods
         run: |
           cd iosApp
           pod install
 
-      - name: Build Xcode Archive
+      - name: Build Archive
         run: |
           xcodebuild \
             -workspace iosApp/iosApp.xcworkspace \
@@ -113,52 +121,30 @@ jobs:
 
       - name: Verify Export
         run: |
-          echo "========== OUTPUT =========="
+          echo "========================"
           ls -lahR $RUNNER_TEMP/output
 
-          echo ""
-          echo "========== FILES =========="
-          find $RUNNER_TEMP/output -type f
-
-          echo ""
-          echo "========== IPA =========="
           IPA=$(find $RUNNER_TEMP/output -name "*.ipa" | head -1)
 
           if [ -z "$IPA" ]; then
-            echo "No IPA was generated."
+            echo "IPA not found"
             exit 1
           fi
 
-          echo "IPA found: $IPA"
-          file "$IPA"
-          
-          echo ""
-          echo "========== SIZE =========="
+          echo "IPA: $IPA"
           ls -lh "$IPA"
-
-          echo ""
-          echo "========== MIME =========="
           file "$IPA"
-
-          echo ""
-          echo "========== ZIP TEST =========="
           unzip -t "$IPA"
 
-          echo ""
-          echo "========== ZIP CONTENT =========="
-          unzip -l "$IPA" | head -40
-
-      - name: Upload Export Artifact
+      - name: Upload Artifact
         uses: actions/upload-artifact@v4
         with:
           name: ios-export
           path: ${{ runner.temp }}/output
 
-      - name: Upload to TestFlight
+      - name: Locate IPA
         run: |
           IPA=$(find $RUNNER_TEMP/output -name "*.ipa" | head -1)
-
-          echo "Uploading: $IPA"
 
           if [ -z "$IPA" ]; then
             echo "IPA not found."
@@ -167,7 +153,7 @@ jobs:
 
           echo "IPA_PATH=$IPA" >> $GITHUB_ENV
 
-      - name: Upload Build
+      - name: Upload to TestFlight
         uses: apple-actions/upload-testflight-build@v4
         with:
           app-path: ${{ env.IPA_PATH }}
