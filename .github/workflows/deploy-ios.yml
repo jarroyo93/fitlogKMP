@@ -111,29 +111,66 @@ jobs:
             -exportOptionsPlist iosApp/ExportOptions.plist \
             -exportPath $RUNNER_TEMP/output
 
-      - name: Verify IPA
+      - name: Verify Export
         run: |
           echo "========== OUTPUT =========="
-          ls -lah $RUNNER_TEMP/output
+          ls -lahR $RUNNER_TEMP/output
 
           echo ""
-          echo "========== FILE =========="
-          file $RUNNER_TEMP/output/iosApp.ipa
+          echo "========== FILES =========="
+          find $RUNNER_TEMP/output -type f
+
+          echo ""
+          echo "========== IPA =========="
+          IPA=$(find $RUNNER_TEMP/output -name "*.ipa" | head -1)
+
+          if [ -z "$IPA" ]; then
+            echo "No IPA was generated."
+            exit 1
+          fi
+
+          echo "IPA found: $IPA"
+          file "$IPA"
+          
+          echo ""
+          echo "========== SIZE =========="
+          ls -lh "$IPA"
+
+          echo ""
+          echo "========== MIME =========="
+          file "$IPA"
+
+          echo ""
+          echo "========== ZIP TEST =========="
+          unzip -t "$IPA"
 
           echo ""
           echo "========== ZIP CONTENT =========="
-          unzip -l $RUNNER_TEMP/output/iosApp.ipa | head -40
+          unzip -l "$IPA" | head -40
 
-      - name: Upload IPA Artifact
+      - name: Upload Export Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: iosApp-ipa
-          path: ${{ runner.temp }}/output/iosApp.ipa
+          name: ios-export
+          path: ${{ runner.temp }}/output
 
       - name: Upload to TestFlight
+        run: |
+          IPA=$(find $RUNNER_TEMP/output -name "*.ipa" | head -1)
+
+          echo "Uploading: $IPA"
+
+          if [ -z "$IPA" ]; then
+            echo "IPA not found."
+            exit 1
+          fi
+
+          echo "IPA_PATH=$IPA" >> $GITHUB_ENV
+
+      - name: Upload Build
         uses: apple-actions/upload-testflight-build@v4
         with:
-          app-path: ${{ runner.temp }}/output/iosApp.ipa
+          app-path: ${{ env.IPA_PATH }}
           issuer-id: ${{ secrets.APPSTORE_ISSUER_ID }}
           api-key-id: ${{ secrets.APPSTORE_KEY_ID }}
           api-private-key: ${{ secrets.APPSTORE_PRIVATE_KEY }}
