@@ -24,10 +24,10 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import dev.josearroyo.fitlog.data.model.RolUsuario
+import dev.josearroyo.fitlog.resources.Res
+import dev.josearroyo.fitlog.resources.logo
 import dev.josearroyo.fitlog.viewmodel.AuthState
 import dev.josearroyo.fitlog.viewmodel.AuthViewModel
-import fitlog.shared.generated.resources.Res
-import fitlog.shared.generated.resources.logo
 import org.jetbrains.compose.resources.painterResource
 
 val FondoOscuro = Color(0xFF241B3C)

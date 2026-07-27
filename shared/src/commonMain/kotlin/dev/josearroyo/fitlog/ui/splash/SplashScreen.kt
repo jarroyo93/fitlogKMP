@@ -17,8 +17,8 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
-import fitlog.shared.generated.resources.Res
-import fitlog.shared.generated.resources.logo
+import dev.josearroyo.fitlog.resources.Res
+import dev.josearroyo.fitlog.resources.logo
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.painterResource
