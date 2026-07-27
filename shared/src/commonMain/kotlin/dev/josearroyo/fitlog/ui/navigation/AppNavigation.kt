@@ -104,7 +104,7 @@ fun AppNavigation() {
             route = "cambiar_password/{uid}",
             arguments = listOf(navArgument("uid") { type = NavType.StringType })
         ) { backStackEntry ->
-            val uid = backStackEntry.arguments?.getString("uid") ?: ""
+            val uid = backStackEntry.savedStateHandle.get<String>("uid") ?: ""
             CambiarContrasenaScreen(
                 uid = uid,
                 onPasswordChangedSuccess = {
@@ -127,7 +127,7 @@ fun AppNavigation() {
             route = "dashboard_entrenador/{uid}",
             arguments = listOf(navArgument("uid") { type = NavType.StringType })
         ) { backStackEntry ->
-            val uid = backStackEntry.arguments?.getString("uid") ?: ""
+            val uid = backStackEntry.savedStateHandle.get<String>("uid") ?: ""
             EntrenadorMainScreen(
                 uid = uid,
                 onNavigateToAtletaDetail = { atletaId ->
@@ -175,8 +175,8 @@ fun AppNavigation() {
                 navArgument("entrenadorId") { type = NavType.StringType }
             )
         ) { backStackEntry ->
-            val atletaId = backStackEntry.arguments?.getString("atletaId") ?: ""
-            val entrenadorId = backStackEntry.arguments?.getString("entrenadorId") ?: ""
+            val atletaId = backStackEntry.savedStateHandle.get<String>("atletaId") ?: ""
+            val entrenadorId = backStackEntry.savedStateHandle.get<String>("entrenadorId") ?: ""
             HistorialFacturacionScreen(
                 atletaId = atletaId,
                 entrenadorId = entrenadorId,
@@ -188,7 +188,7 @@ fun AppNavigation() {
             route = "informe_global_facturacion/{entrenadorId}",
             arguments = listOf(navArgument("entrenadorId") { type = NavType.StringType })
         ) { backStackEntry ->
-            val entrenadorId = backStackEntry.arguments?.getString("entrenadorId") ?: ""
+            val entrenadorId = backStackEntry.savedStateHandle.get<String>("entrenadorId") ?: ""
             InformeFacturacionGlobalScreen(
                 entrenadorId = entrenadorId,
                 onBack = { navController.safePopBackStack() }
@@ -220,7 +220,7 @@ fun AppNavigation() {
             route = "atleta_detail/{atletaId}",
             arguments = listOf(navArgument("atletaId") { type = NavType.StringType })
         ) { backStackEntry ->
-            val atletaId = backStackEntry.arguments?.getString("atletaId") ?: ""
+            val atletaId = backStackEntry.savedStateHandle.get<String>("atletaId") ?: ""
             AtletaDetailScreen(
                 atletaId = atletaId,
                 onBack = { navController.safePopBackStack() },
@@ -257,8 +257,8 @@ fun AppNavigation() {
                 navArgument("entrenadorId") { type = NavType.StringType }
             )
         ) { backStackEntry ->
-            val atletaId = backStackEntry.arguments?.getString("atletaId") ?: ""
-            val entrenadorId = backStackEntry.arguments?.getString("entrenadorId") ?: ""
+            val atletaId = backStackEntry.savedStateHandle.get<String>("atletaId") ?: ""
+            val entrenadorId = backStackEntry.savedStateHandle.get<String>("entrenadorId") ?: ""
             SeleccionarPlantillaScreen(
                 atletaId = atletaId,
                 entrenadorId = entrenadorId,
@@ -270,7 +270,7 @@ fun AppNavigation() {
             route = "historial_valoracion/{atletaId}",
             arguments = listOf(navArgument("atletaId") { type = NavType.StringType })
         ) { backStackEntry ->
-            val atletaId = backStackEntry.arguments?.getString("atletaId") ?: ""
+            val atletaId = backStackEntry.savedStateHandle.get<String>("atletaId") ?: ""
             HistorialValoracionScreen(
                 atletaId = atletaId,
                 onBack = { navController.safePopBackStack() },
@@ -284,7 +284,7 @@ fun AppNavigation() {
             route = "agregar_valoracion/{atletaId}",
             arguments = listOf(navArgument("atletaId") { type = NavType.StringType })
         ) { backStackEntry ->
-            val atletaId = backStackEntry.arguments?.getString("atletaId") ?: ""
+            val atletaId = backStackEntry.savedStateHandle.get<String>("atletaId") ?: ""
             AddValoracionScreen(
                 atletaId = atletaId,
                 onBack = { navController.safePopBackStack() }
@@ -295,7 +295,7 @@ fun AppNavigation() {
             route = "historial_habitos/{atletaId}",
             arguments = listOf(navArgument("atletaId") { type = NavType.StringType })
         ) { backStackEntry ->
-            val atletaId = backStackEntry.arguments?.getString("atletaId") ?: ""
+            val atletaId = backStackEntry.savedStateHandle.get<String>("atletaId") ?: ""
             HistorialHabitosScreen(
                 atletaId = atletaId,
                 onBack = { navController.safePopBackStack() },
@@ -309,7 +309,7 @@ fun AppNavigation() {
             route = "agregar_habitos/{atletaId}",
             arguments = listOf(navArgument("atletaId") { type = NavType.StringType })
         ) { backStackEntry ->
-            val atletaId = backStackEntry.arguments?.getString("atletaId") ?: ""
+            val atletaId = backStackEntry.savedStateHandle.get<String>("atletaId") ?: ""
             AddHabitosScreen(
                 atletaId = atletaId,
                 onBack = { navController.safePopBackStack() }
@@ -320,7 +320,7 @@ fun AppNavigation() {
             route = "perfil_atleta/{atletaId}",
             arguments = listOf(navArgument("atletaId") { type = NavType.StringType })
         ) { backStackEntry ->
-            val atletaId = backStackEntry.arguments?.getString("atletaId") ?: ""
+            val atletaId = backStackEntry.savedStateHandle.get<String>("atletaId") ?: ""
             PerfilAtletaScreen(
                 atletaId = atletaId,
                 onBack = { navController.safePopBackStack() }
@@ -334,8 +334,8 @@ fun AppNavigation() {
                 navArgument("rutinaId") { type = NavType.StringType }
             )
         ) { backStackEntry ->
-            val atletaId = backStackEntry.arguments?.getString("atletaId") ?: ""
-            val rutinaId = backStackEntry.arguments?.getString("rutinaId") ?: ""
+            val atletaId = backStackEntry.savedStateHandle.get<String>("atletaId") ?: ""
+            val rutinaId = backStackEntry.savedStateHandle.get<String>("rutinaId") ?: ""
             EditRutinaAsignadaScreen(
                 atletaId = atletaId,
                 rutinaId = rutinaId,
@@ -347,7 +347,7 @@ fun AppNavigation() {
             route = "progreso_atleta/{atletaId}",
             arguments = listOf(navArgument("atletaId") { type = NavType.StringType })
         ) { backStackEntry ->
-            val atletaId = backStackEntry.arguments?.getString("atletaId") ?: ""
+            val atletaId = backStackEntry.savedStateHandle.get<String>("atletaId") ?: ""
             ProgresoAtletaScreen(
                 userId = atletaId,
                 onBack = { navController.safePopBackStack() }
@@ -361,7 +361,7 @@ fun AppNavigation() {
             route = "biblioteca/{entrenadorId}",
             arguments = listOf(navArgument("entrenadorId") { type = NavType.StringType })
         ) { backStackEntry ->
-            val id = backStackEntry.arguments?.getString("entrenadorId") ?: ""
+            val id = backStackEntry.savedStateHandle.get<String>("entrenadorId") ?: ""
             BibliotecaScreen(
                 entrenadorId = id,
                 onNavigateToAddEjercicio = { entId -> navController.navigate("add_ejercicio/$entId") },
@@ -375,7 +375,7 @@ fun AppNavigation() {
             route = "add_ejercicio/{entrenadorId}",
             arguments = listOf(navArgument("entrenadorId") { type = NavType.StringType })
         ) { backStackEntry ->
-            val id = backStackEntry.arguments?.getString("entrenadorId") ?: ""
+            val id = backStackEntry.savedStateHandle.get<String>("entrenadorId") ?: ""
             AddEjercicioScreen(
                 entrenadorId = id,
                 onBack = { navController.safePopBackStack() }
@@ -389,8 +389,8 @@ fun AppNavigation() {
                 navArgument("ejercicioId") { type = NavType.StringType }
             )
         ) { backStackEntry ->
-            val entId = backStackEntry.arguments?.getString("entrenadorId") ?: ""
-            val ejId = backStackEntry.arguments?.getString("ejercicioId") ?: ""
+            val entId = backStackEntry.savedStateHandle.get<String>("entrenadorId") ?: ""
+            val ejId = backStackEntry.savedStateHandle.get<String>("ejercicioId") ?: ""
             AddEjercicioScreen(
                 entrenadorId = entId,
                 ejercicioId = ejId,
@@ -402,7 +402,7 @@ fun AppNavigation() {
             route = "add_plantilla/{entrenadorId}",
             arguments = listOf(navArgument("entrenadorId") { type = NavType.StringType })
         ) { backStackEntry ->
-            val id = backStackEntry.arguments?.getString("entrenadorId") ?: ""
+            val id = backStackEntry.savedStateHandle.get<String>("entrenadorId") ?: ""
             AddPlantillaScreen(
                 entrenadorId = id,
                 onBack = { navController.safePopBackStack() }
@@ -416,8 +416,8 @@ fun AppNavigation() {
                 navArgument("plantillaId") { type = NavType.StringType }
             )
         ) { backStackEntry ->
-            val entId = backStackEntry.arguments?.getString("entrenadorId") ?: ""
-            val planId = backStackEntry.arguments?.getString("plantillaId") ?: ""
+            val entId = backStackEntry.savedStateHandle.get<String>("entrenadorId") ?: ""
+            val planId = backStackEntry.savedStateHandle.get<String>("plantillaId") ?: ""
             AddPlantillaScreen(
                 entrenadorId = entId,
                 plantillaId = planId,
@@ -432,7 +432,7 @@ fun AppNavigation() {
             route = "editar_datos_personales/{uid}",
             arguments = listOf(navArgument("uid") { type = NavType.StringType })
         ) { backStackEntry ->
-            val uid = backStackEntry.arguments?.getString("uid") ?: ""
+            val uid = backStackEntry.savedStateHandle.get<String>("uid") ?: ""
 
             val entrenadorVM: dev.josearroyo.fitlog.viewmodel.entrenador.PerfilEntrenadorViewModel = viewModel()
             val atletaVM: dev.josearroyo.fitlog.viewmodel.atleta.PerfilAtletaViewModel = viewModel()
@@ -507,7 +507,7 @@ fun AppNavigation() {
             route = "dashboard_atleta/{uid}",
             arguments = listOf(navArgument("uid") { type = NavType.StringType })
         ) { backStackEntry ->
-            val uid = backStackEntry.arguments?.getString("uid") ?: ""
+            val uid = backStackEntry.savedStateHandle.get<String>("uid") ?: ""
 
             AtletaMainScreen(
                 uid = uid,

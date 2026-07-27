@@ -20,16 +20,20 @@ jobs:
           distribution: temurin
           java-version: "17"
 
+      # 🟢 1. CACHÉ DE KOTLIN/NATIVE (Evita redescargar el compilador de iOS)
+      - name: Cache Konan (Kotlin/Native)
+        uses: actions/cache@v4
+        with:
+          path: ~/.konan
+          key: ${{ runner.os }}-konan-v1-${{ hashFiles('**/libs.versions.toml', '**/*.gradle.kts') }}
+          restore-keys: |
+            ${{ runner.os }}-konan-v1-
+
+      # 🟢 2. CONFIGURACIÓN DE GRADLE CON CACHÉ DE TAREAS (v4)
       - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@v3
+        uses: gradle/actions/setup-gradle@v4
 
-      # Mostrar las versiones disponibles
-      - name: List Installed Xcodes
-        run: |
-          echo "Installed Xcodes:"
-          ls /Applications | grep Xcode || true
-
-      # Seleccionar Xcode 26
+      # Seleccionar Xcode
       - name: Select Xcode
         uses: maxim-lobanov/setup-xcode@v1
         with:
@@ -43,21 +47,7 @@ jobs:
       - name: Make gradlew executable
         run: chmod +x ./gradlew
 
-      - name: Show Gradle Version
-        run: ./gradlew --version
-
-      - name: List Shared Tasks
-        run: ./gradlew :shared:tasks --all
-
-      - name: Show Shared Dependencies
-        run: ./gradlew :shared:dependencies
-
-      - name: Dependency Insight
-        run: |
-          ./gradlew :shared:dependencyInsight \
-            --dependency org.jetbrains.compose \
-            --configuration commonMainCompileDependencyConfiguration || true
-
+      # 🔑 CERTIFICADOS Y PROVISIONING PROFILE
       - name: Install Apple Certificate & Provisioning Profile
         env:
           BUILD_CERTIFICATE_BASE64: ${{ secrets.BUILD_CERTIFICATE_BASE64 }}
@@ -96,11 +86,13 @@ jobs:
           cp "$RUNNER_TEMP/profile.mobileprovision" \
             ~/Library/MobileDevice/Provisioning\ Profiles/$PROFILE_UUID.mobileprovision
 
+      # 📦 INSTALACIÓN DE PODS
       - name: Install CocoaPods
         run: |
           cd iosApp
           pod install
 
+      # 🛠️ COMPILACIÓN DEL ARCHIVO .XCARCHIVE
       - name: Build Archive
         run: |
           xcodebuild \
@@ -111,6 +103,7 @@ jobs:
             -archivePath $RUNNER_TEMP/iosApp.xcarchive \
             archive
 
+      # 📤 EXPORTACIÓN A IPA
       - name: Export IPA
         run: |
           xcodebuild \
@@ -153,6 +146,7 @@ jobs:
 
           echo "IPA_PATH=$IPA" >> $GITHUB_ENV
 
+      # 🚀 PUBLICACIÓN A TESTFLIGHT
       - name: Upload to TestFlight
         uses: apple-actions/upload-testflight-build@v4
         with:
